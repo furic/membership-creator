@@ -1,0 +1,15 @@
+{
+  "name": "membership-api",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@cloudflare/vitest-plugin": "^1.5.1",
+    "vitest": "^4.1.12",
+    "wrangler": "^4.157.0"
+  }
+}
