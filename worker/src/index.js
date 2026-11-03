@@ -19,6 +19,7 @@ const toMember = (row) => ({
   issueDate: row.issue_date,
   expiryDate: row.expiry_date,
   voided: Boolean(row.voided),
+  lifetime: Boolean(row.lifetime),
 });
 
 function corsHeaders(request) {
@@ -57,17 +58,21 @@ function cleanName(name) {
 }
 
 async function issueMembers(env, body) {
-  const { names, issueDate, expiryDate } = body ?? {};
+  const { names, issueDate, expiryDate, lifetime = false } = body ?? {};
   if (!Array.isArray(names) || names.length === 0 || names.length > MAX_BATCH) throw new HttpError(400, "invalid names");
-  if (!ISO_DATE.test(issueDate ?? "") || !ISO_DATE.test(expiryDate ?? "")) throw new HttpError(400, "invalid date");
+  if (!ISO_DATE.test(issueDate ?? "")) throw new HttpError(400, "invalid date");
+  if (!lifetime && !ISO_DATE.test(expiryDate ?? "")) throw new HttpError(400, "invalid date");
   const clean = names.map(cleanName);
 
+  // 永久會員 have no expiry date.
   const insert = env.DB.prepare(
-    `INSERT INTO members (number, name, issue_date, expiry_date)
-     SELECT COALESCE(MAX(number), 0) + 1, ?, ?, ? FROM members
+    `INSERT INTO members (number, name, issue_date, expiry_date, lifetime)
+     SELECT COALESCE(MAX(number), 0) + 1, ?, ?, ?, ? FROM members
      RETURNING *`,
   );
-  const results = await env.DB.batch(clean.map((name) => insert.bind(name, issueDate, expiryDate)));
+  const results = await env.DB.batch(
+    clean.map((name) => insert.bind(name, issueDate, lifetime ? null : expiryDate, lifetime ? 1 : 0)),
+  );
   return results.map((r) => toMember(r.results[0]));
 }
 

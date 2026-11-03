@@ -83,17 +83,23 @@ let issuing = false;
 
 function draftCards() {
   const issueDate = todayISO();
-  const expiryDate = $("expiry").value || addYears(issueDate, 1);
-  return parseNames($("names").value).map((name) => ({ name, number: null, issueDate, expiryDate }));
+  const lifetime = $("lifetime").checked;
+  const expiryDate = lifetime ? null : $("expiry").value || addYears(issueDate, 1);
+  return parseNames($("names").value).map((name) => ({ name, number: null, issueDate, expiryDate, lifetime }));
 }
 
 function refreshIssue() {
   const cards = issued ?? draftCards();
   $("issue-preview").innerHTML = cards.length ? renderSheets(cards) : '<p class="hint">輸入姓名後會在此顯示會員證。</p>';
 
-  const first = issued ? issued[0].expiryDate : $("expiry").value || addYears(todayISO(), 1);
-  const prefix = issued || $("expiry").value ? "有效日期：" : "留空即為一年後：";
-  $("expiry-hint").textContent = `${prefix}${formatDMY(first)}、${formatDMY(addYears(first, 1))}、${formatDMY(addYears(first, 2))}`;
+  const lifetime = issued ? issued[0].lifetime : $("lifetime").checked;
+  if (lifetime) {
+    $("expiry-hint").textContent = "永久會員：卡背顯示「永久會員」，不設有效日期。";
+  } else {
+    const first = issued ? issued[0].expiryDate : $("expiry").value || addYears(todayISO(), 1);
+    const prefix = issued || $("expiry").value ? "有效日期：" : "留空即為一年後：";
+    $("expiry-hint").textContent = `${prefix}${formatDMY(first)}、${formatDMY(addYears(first, 1))}、${formatDMY(addYears(first, 2))}`;
+  }
   $("count-hint").textContent = cards.length ? `共 ${cards.length} 位，需 ${Math.ceil(cards.length / 5)} 張 A4 紙。` : "";
 
   $("issue-btn").hidden = Boolean(issued);
@@ -101,11 +107,13 @@ function refreshIssue() {
   $("print-btn").hidden = !issued;
   $("new-batch-btn").hidden = !issued;
   $("names").readOnly = Boolean(issued);
-  $("expiry").disabled = Boolean(issued);
+  $("expiry").disabled = Boolean(issued) || lifetime;
+  $("lifetime").disabled = Boolean(issued);
 }
 
 $("names").addEventListener("input", refreshIssue);
 $("expiry").addEventListener("input", refreshIssue);
+$("lifetime").addEventListener("change", refreshIssue);
 
 $("issue-btn").addEventListener("click", async () => {
   const cards = draftCards();
@@ -113,7 +121,8 @@ $("issue-btn").addEventListener("click", async () => {
   issuing = true;
   refreshIssue();
   try {
-    issued = await api.issue(cards.map((c) => c.name), cards[0].issueDate, cards[0].expiryDate);
+    const { issueDate, expiryDate, lifetime } = cards[0];
+    issued = await api.issue(cards.map((c) => c.name), issueDate, expiryDate, lifetime);
     const nums = issued.map((m) => formatNumber(m.number));
     $("issued-msg").textContent = `已編號 ${nums[0]}${nums.length > 1 ? "–" + nums.at(-1) : ""}，已存入會員名單。`;
   } catch (err) {
@@ -130,6 +139,7 @@ $("new-batch-btn").addEventListener("click", () => {
   issued = null;
   $("names").value = "";
   $("expiry").value = "";
+  $("lifetime").checked = false;
   $("issued-msg").textContent = "";
   refreshIssue();
   $("names").focus();
@@ -162,7 +172,7 @@ function renderMembers() {
         <td>${formatNumber(m.number)}</td>
         <td>${escapeHtml(m.name)}${m.voided ? ' <span class="tag">已作廢</span>' : ""}</td>
         <td>${formatDMY(m.issueDate)}</td>
-        <td>${formatDMY(m.expiryDate)}</td>
+        <td>${m.lifetime ? "永久會員" : formatDMY(m.expiryDate)}</td>
         <td class="row-actions">
           <button type="button" data-rename="${m.number}">修改姓名</button>
           <button type="button" data-void="${m.number}">${m.voided ? "恢復" : "作廢"}</button>

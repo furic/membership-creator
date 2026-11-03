@@ -33,9 +33,9 @@ describe("issuing", () => {
     expect(res.status).toBe(201);
     const { members } = await res.json();
     expect(members).toEqual([
-      { number: 1, name: "陳大文", issueDate: "2026-11-04", expiryDate: "2027-11-04", voided: false },
-      { number: 2, name: "李小梅", issueDate: "2026-11-04", expiryDate: "2027-11-04", voided: false },
-      { number: 3, name: "黃志明", issueDate: "2026-11-04", expiryDate: "2027-11-04", voided: false },
+      { number: 1, name: "陳大文", issueDate: "2026-11-04", expiryDate: "2027-11-04", voided: false, lifetime: false },
+      { number: 2, name: "李小梅", issueDate: "2026-11-04", expiryDate: "2027-11-04", voided: false, lifetime: false },
+      { number: 3, name: "黃志明", issueDate: "2026-11-04", expiryDate: "2027-11-04", voided: false, lifetime: false },
     ]);
   });
 
@@ -44,6 +44,19 @@ describe("issuing", () => {
     const [a, b] = await Promise.all([issue(names("甲")), issue(names("乙"))]);
     const numbers = [...(await a.json()).members, ...(await b.json()).members].map((m) => m.number);
     expect(numbers.sort((x, y) => x - y)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+  });
+
+  it("issues lifetime members without an expiry date", async () => {
+    const res = await call("/api/members", {
+      method: "POST",
+      body: JSON.stringify({ names: ["陳大文"], issueDate: "2026-11-04", lifetime: true }),
+    });
+    expect(res.status).toBe(201);
+    expect((await res.json()).members).toEqual([
+      { number: 1, name: "陳大文", issueDate: "2026-11-04", expiryDate: null, voided: false, lifetime: true },
+    ]);
+    const listed = await (await call("/api/members")).json();
+    expect(listed.members[0]).toMatchObject({ lifetime: true, expiryDate: null });
   });
 
   it("rejects bad input", async () => {

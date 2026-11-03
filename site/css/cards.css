@@ -111,6 +111,20 @@
   line-height: 1.55;
 }
 
+.back.lifetime {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.lifetime-text {
+  color: #543c7d;
+  font-size: 9mm;
+  font-weight: 800;
+  letter-spacing: 3mm;
+  margin-right: -3mm; /* balance the trailing letter-spacing */
+}
+
 .back .period + .period {
   margin-top: 2mm;
 }

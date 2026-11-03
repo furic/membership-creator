@@ -25,7 +25,8 @@ function front({ name, number, issueDate }) {
     </div></div>`;
 }
 
-function back({ issueDate, expiryDate }) {
+function back({ issueDate, expiryDate, lifetime }) {
+  if (lifetime) return '<div class="half"><div class="face back lifetime"><div class="lifetime-text">永久會員</div></div></div>';
   const periods = expiryDates(issueDate, expiryDate).map(
     (d) => `<div class="period">${row("有效日期", formatDMY(d))}${signature}</div>`,
   );

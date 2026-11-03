@@ -62,6 +62,8 @@ Dates:
 - **Second and third 有效日期.** These are the first date plus one year and plus two years. Example: 03/11/2027, 03/11/2028, 03/11/2029.
 - **29/02.** Plus one year becomes 28/02. (My call.)
 
+**永久會員 (lifetime members)**, added 2026-11-04: an option per batch, off by default. When it is on, there is no expiry date. The back of the card shows only 「永久會員」, large and centred in the club purple, and the register shows 永久會員 in the 有效日期 column. Stored as `lifetime = 1` with `expiry_date = NULL` (migration `0002_lifetime.sql`).
+
 Number: zero-padded to 3 digits (`001`). Past 999 it simply grows (`1000`). (My call.)
 
 Language: everything is Traditional Chinese, with `lang="zh-Hant-MO"`. Use a Traditional Chinese web font such as Noto Sans TC, so cards look the same on every computer. (Font choice is my call.)

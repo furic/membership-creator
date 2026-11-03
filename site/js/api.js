@@ -47,8 +47,8 @@ async function request(path, { method = "GET", body, code = passcode.get() } = {
 
 export const ping = (code) => request("/api/ping", { code });
 
-export const issue = async (names, issueDate, expiryDate) =>
-  (await request("/api/members", { method: "POST", body: { names, issueDate, expiryDate } })).members;
+export const issue = async (names, issueDate, expiryDate, lifetime = false) =>
+  (await request("/api/members", { method: "POST", body: { names, issueDate, expiryDate, lifetime } })).members;
 
 export const list = async (q = "", includeVoided = false) => {
   const params = new URLSearchParams();

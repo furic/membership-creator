@@ -21,6 +21,13 @@ test("front shows the issue date, back shows three yearly expiry dates", () => {
   for (const d of ["04/11/2026", "03/11/2027", "03/11/2028", "03/11/2029"]) assert.ok(html.includes(d), d);
 });
 
+test("lifetime cards show 永久會員 on the back instead of expiry dates", () => {
+  const html = renderSheets([card({ lifetime: true, expiryDate: null })]);
+  assert.ok(html.includes("永久會員"));
+  assert.ok(!html.includes("有效日期"));
+  assert.ok(html.includes("04/11/2026"));
+});
+
 test("names are HTML-escaped", () => {
   const html = renderSheets([card({ name: "<b>陳</b>" })]);
   assert.ok(html.includes("&lt;b&gt;陳&lt;/b&gt;"));

@@ -304,3 +304,7 @@ tr.voided td:first-child {
     box-shadow: none;
   }
 }
+
+.lifetime-check {
+  margin-top: 10px;
+}
