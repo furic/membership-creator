@@ -1,0 +1,50 @@
+<style>
+  .wrap { transform: scale(.72); transform-origin: top left; height: 820px; }
+  .a4 { width: 210mm; height: 297mm; background: #fff; box-shadow: 0 2px 12px rgba(0,0,0,.4); padding: 13.5mm 19.4mm; box-sizing: border-box;
+        font-family: "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", sans-serif; color: #111; }
+  .strip { display: flex; width: 171.2mm; height: 54mm; outline: 0.3mm solid #999; position: relative; }
+  .strip + .strip { margin-top: 0; }
+  .strip::after { content: ""; position: absolute; left: 85.6mm; top: 0; bottom: 0; border-left: 0.3mm dashed #999; }
+  .half { width: 85.6mm; height: 54mm; padding: 1.5mm; box-sizing: border-box; }
+  .mc { width: 100%; height: 100%; border: 0.5mm solid #333; border-radius: 3mm; box-sizing: border-box; padding: 2.5mm 3.5mm; }
+  .club { color: #543c7d; font-weight: 700; font-size: 4.6mm; line-height: 1.3; flex: 1; text-align: center; }
+  .title { font-weight: 800; font-size: 5.6mm; letter-spacing: 1.5mm; text-align: center; margin: .6mm 0; }
+  .row { font-size: 3.7mm; line-height: 1.5; }
+  .back .row { line-height: 1.55; }
+  .back .gap { margin-top: 2mm; }
+  .lbl { display: inline-block; width: 18mm; text-align-last: justify; margin-right: 1mm; }
+  .line { display: inline-block; width: 30mm; border-bottom: .25mm solid #111; height: 1em; vertical-align: -.5mm; }
+  .legend { font-size: 13px; color: #aaa; margin: 4px 0 14px; }
+</style>
+
+<h2>Fold-over cards: one A4 sheet, single-sided</h2>
+<p class="subtitle">Each card is one strip: front on the left, back on the right. Cut along the solid outline, fold on the dashed line. 5 cards per A4. Shown at about 72% scale.</p>
+<p class="legend">solid grey = cut line · dashed grey = fold line</p>
+
+<div class="wrap"><div class="a4" id="a4"></div></div>
+
+<script>
+  const names = ["陳大文", "李小梅", "黃志明", "張美玲", "何家豪"];
+  const front = (n, i) => `
+    <div class="half"><div class="mc">
+      <div style="display:flex; align-items:center; gap:2.5mm;">
+        <img src="../../../site/assets/stamp.png" style="width:23mm; display:block;">
+        <div class="club">澳門中國民族服飾<br>愛好者協會</div>
+      </div>
+      <div class="title">會員證</div>
+      <div class="row"><span class="lbl">姓名</span>：${n}</div>
+      <div class="row"><span class="lbl">會員編號</span>：${String(i + 1).padStart(3, "0")}</div>
+      <div class="row"><span class="lbl">簽發日期</span>：04/11/2026</div>
+      <div class="row"><span class="lbl">簽名</span>：<span class="line"></span></div>
+    </div></div>`;
+  const back = `
+    <div class="half"><div class="mc back">
+      <div class="row"><span class="lbl">有效日期</span>：04/11/2027</div>
+      <div class="row"><span class="lbl">簽名</span>：<span class="line"></span></div>
+      <div class="row gap"><span class="lbl">有效日期</span>：04/11/2028</div>
+      <div class="row"><span class="lbl">簽名</span>：<span class="line"></span></div>
+      <div class="row gap"><span class="lbl">有效日期</span>：04/11/2029</div>
+      <div class="row"><span class="lbl">簽名</span>：<span class="line"></span></div>
+    </div></div>`;
+  document.getElementById("a4").innerHTML = names.map((n, i) => `<div class="strip">${front(n, i)}${back}</div>`).join("");
+</script>
