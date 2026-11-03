@@ -1,0 +1,54 @@
+# 會員證製作 — 澳門中國民族服飾愛好者協會
+
+網址：https://furic.github.io/membership-creator/
+
+## 使用方法
+
+1. 打開網址，輸入協會共用密碼（同一部電腦只需輸入一次）。
+2. **新增會員**：每行輸入一位會員姓名。「首個有效日期」可留空，留空即為今日起計一年後；卡背會印三個有效日期，每個相隔一年。
+3. 檢查預覽無誤後，按 **確認並編號**。系統會按次序派發會員編號（001、002……），並存入會員名單。編號一經派發不會重用。
+4. 按 **列印**。列印設定請選 **A4**、**實際大小（100%）**，並**關閉頁首及頁尾**。每張 A4 可印 5 張會員證。
+5. 沿實線剪下，沿中間虛線對摺：左邊是正面，右邊是背面。
+6. **會員名單**：可搜尋姓名或編號、修改姓名、作廢（編號不會重用），亦可勾選會員後按 **重印所選**。
+
+---
+
+## Technical setup (English)
+
+- `site/`: static page (plain HTML/CSS/JS, no build). Deployed to GitHub Pages by `.github/workflows/pages.yml` on every push to `main`.
+- `worker/`: Cloudflare Worker `membership-api` with a D1 database `membership`. It holds the member register and assigns numbers atomically.
+- Design and plan: `docs/superpowers/`.
+
+### Tests
+
+```sh
+cd site && npm test                     # date / name / card rendering helpers
+cd worker && npm install && npm test    # API, incl. concurrent number assignment
+```
+
+### Run locally
+
+```sh
+cd worker && npx wrangler d1 migrations apply membership --local && npx wrangler dev   # needs worker/.dev.vars with PASSCODE=...
+cd site && python3 -m http.server 8080
+# open http://localhost:8080/?api=http://127.0.0.1:8787
+```
+
+### Deploy / move to another Cloudflare account
+
+```sh
+cd worker
+npx wrangler login
+npx wrangler d1 create membership                 # put the new database_id in wrangler.toml
+npx wrangler d1 migrations apply membership --remote
+npx wrangler secret put PASSCODE                  # the shared passcode; change it any time the same way
+npx wrangler deploy
+```
+
+Then set `DEFAULT_API_BASE` in `site/js/config.js` to the deployed Worker URL, and push. If the site's address changes, update `ALLOWED_ORIGINS` in `worker/src/index.js` and redeploy the Worker.
+
+### Backup
+
+```sh
+cd worker && npx wrangler d1 export membership --remote --output members-backup.sql
+```
