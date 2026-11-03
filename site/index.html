@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="zh-Hant-MO">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>會員證製作</title>
+  <link rel="icon" href="assets/stamp.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/cards.css">
+  <link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+  <div class="app no-print">
+    <header class="top">
+      <img class="logo" src="assets/stamp.png" alt="">
+      <div class="brand">澳門中國民族服飾愛好者協會<small>會員證製作</small></div>
+      <nav class="tabs" hidden>
+        <button type="button" data-view="issue" class="tab">新增會員</button>
+        <button type="button" data-view="register" class="tab">會員名單</button>
+        <button type="button" id="logout" class="tab subtle">登出</button>
+      </nav>
+    </header>
+
+    <p id="status" class="status" role="status" hidden></p>
+
+    <section id="view-login" class="view" hidden>
+      <form id="login-form" class="panel narrow">
+        <h1>輸入密碼</h1>
+        <label>協會共用密碼
+          <input id="login-code" type="password" autocomplete="current-password" required>
+        </label>
+        <p id="login-error" class="error" hidden></p>
+        <button type="submit" class="primary">登入</button>
+      </form>
+    </section>
+
+    <section id="view-issue" class="view" hidden>
+      <div class="panel">
+        <h1>新增會員</h1>
+        <div class="form-grid">
+          <label>會員姓名（每行一位）
+            <textarea id="names" rows="8" placeholder="陳大文&#10;李小梅"></textarea>
+          </label>
+          <div>
+            <label>首個有效日期
+              <input id="expiry" type="date">
+            </label>
+            <p class="hint" id="expiry-hint"></p>
+            <p class="hint" id="count-hint"></p>
+            <div class="actions">
+              <button type="button" id="issue-btn" class="primary" disabled>確認並編號</button>
+              <button type="button" id="print-btn" class="primary" hidden>列印</button>
+              <button type="button" id="new-batch-btn" hidden>新一批</button>
+            </div>
+            <p class="hint" id="issued-msg"></p>
+            <p class="hint print-tip">列印時請選 A4、實際大小（100%），並關閉頁首及頁尾。剪下後沿虛線對摺。</p>
+          </div>
+        </div>
+      </div>
+      <h2 class="preview-title">預覽</h2>
+      <div id="issue-preview" class="preview"></div>
+    </section>
+
+    <section id="view-register" class="view" hidden>
+      <div class="panel">
+        <h1>會員名單</h1>
+        <div class="toolbar">
+          <input id="search" type="search" placeholder="搜尋姓名或會員編號">
+          <label class="check"><input id="show-voided" type="checkbox"> 顯示已作廢</label>
+          <button type="button" id="reprint-btn" class="primary" disabled>重印所選</button>
+        </div>
+        <p class="hint print-tip">列印時請選 A4、實際大小（100%），並關閉頁首及頁尾。</p>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th><input id="select-all" type="checkbox" aria-label="全選"></th>
+                <th>會員編號</th><th>姓名</th><th>簽發日期</th><th>有效日期</th><th>操作</th>
+              </tr>
+            </thead>
+            <tbody id="members"></tbody>
+          </table>
+          <p id="empty" class="hint" hidden>沒有會員記錄。</p>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <div id="print-root" class="print-root"></div>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
