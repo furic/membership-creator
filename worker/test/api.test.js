@@ -7,6 +7,7 @@ const AUTH = { Authorization: "Bearer test-pass", "Content-Type": "application/j
 
 beforeEach(async () => {
   await env.DB.exec("DELETE FROM members");
+  await env.DB.exec("DELETE FROM settings");
 });
 
 const call = (path, init = {}) =>
@@ -33,9 +34,9 @@ describe("issuing", () => {
     expect(res.status).toBe(201);
     const { members } = await res.json();
     expect(members).toEqual([
-      { number: 1, name: "陳大文", issueDate: "2026-11-04", expiryDate: "2027-11-04", voided: false, lifetime: false },
-      { number: 2, name: "李小梅", issueDate: "2026-11-04", expiryDate: "2027-11-04", voided: false, lifetime: false },
-      { number: 3, name: "黃志明", issueDate: "2026-11-04", expiryDate: "2027-11-04", voided: false, lifetime: false },
+      { number: 1, name: "陳大文", issueDate: "2026-11-04", expiryDate: "2027-11-04", lifetime: false },
+      { number: 2, name: "李小梅", issueDate: "2026-11-04", expiryDate: "2027-11-04", lifetime: false },
+      { number: 3, name: "黃志明", issueDate: "2026-11-04", expiryDate: "2027-11-04", lifetime: false },
     ]);
   });
 
@@ -53,7 +54,7 @@ describe("issuing", () => {
     });
     expect(res.status).toBe(201);
     expect((await res.json()).members).toEqual([
-      { number: 1, name: "陳大文", issueDate: "2026-11-04", expiryDate: null, voided: false, lifetime: true },
+      { number: 1, name: "陳大文", issueDate: "2026-11-04", expiryDate: null, lifetime: true },
     ]);
     const listed = await (await call("/api/members")).json();
     expect(listed.members[0]).toMatchObject({ lifetime: true, expiryDate: null });
@@ -69,7 +70,7 @@ describe("issuing", () => {
 });
 
 describe("register", () => {
-  it("searches by name or number, newest first, hiding voided rows", async () => {
+  it("searches by name or number, newest first", async () => {
     await issue(["陳大文", "李小梅", "李大衛"]);
     const byName = await (await call("/api/members?q=" + encodeURIComponent("李"))).json();
     expect(byName.members.map((m) => m.number)).toEqual([3, 2]);
@@ -79,21 +80,21 @@ describe("register", () => {
     expect(all.members.map((m) => m.number)).toEqual([3, 2, 1]);
   });
 
-  it("renames without renumbering, and voids", async () => {
+  it("renames without renumbering", async () => {
     await issue(["陳大文", "李小梅"]);
     const renamed = await call("/api/members/1", { method: "PATCH", body: JSON.stringify({ name: "陳大明" }) });
     expect((await renamed.json()).member).toMatchObject({ number: 1, name: "陳大明" });
-
-    await call("/api/members/2", { method: "PATCH", body: JSON.stringify({ voided: true }) });
-    const visible = await (await call("/api/members")).json();
-    expect(visible.members.map((m) => m.number)).toEqual([1]);
-    const withVoided = await (await call("/api/members?voided=1")).json();
-    expect(withVoided.members.map((m) => [m.number, m.voided])).toEqual([[2, true], [1, false]]);
-
-    const next = await (await issue(["新會員"])).json();
-    expect(next.members[0].number).toBe(3);
-
     expect((await call("/api/members/99", { method: "PATCH", body: JSON.stringify({ name: "x" }) })).status).toBe(404);
+  });
+
+  it("deletes a member permanently", async () => {
+    await issue(["陳大文", "李小梅", "黃志明"]);
+    const res = await call("/api/members/2", { method: "DELETE" });
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ deleted: 2 });
+    const all = await (await call("/api/members")).json();
+    expect(all.members.map((m) => m.number)).toEqual([3, 1]);
+    expect((await call("/api/members/2", { method: "DELETE" })).status).toBe(404);
   });
 });
 
@@ -110,14 +111,17 @@ describe("renumbering", () => {
     expect(await (await call("/api/members/next")).json()).toEqual({ next: 11 });
   });
 
-  it("refuses a number that is already used, even by a voided member, and says by whom", async () => {
+  it("refuses a number that is already used and says by whom, but reuses a deleted member's number", async () => {
     await issue(["陳大文", "李小梅", "黃志明"]);
-    await patch(3, { voided: true });
     const taken = await patch(1, { number: 2 });
     expect(taken.status).toBe(409);
     expect(await taken.json()).toEqual({ error: "duplicate", number: 2, name: "李小梅" });
-    expect((await patch(1, { number: 3 })).status).toBe(409);
     expect((await patch(1, { number: 1 })).status).toBe(200); // same number is a no-op
+
+    await call("/api/members/3", { method: "DELETE" });
+    const moved = await patch(1, { number: 3 });
+    expect(moved.status).toBe(200);
+    expect((await moved.json()).member).toMatchObject({ number: 3, name: "陳大文" });
   });
 
   it("rejects numbers that are not positive whole numbers", async () => {
@@ -127,11 +131,40 @@ describe("renumbering", () => {
 });
 
 describe("next number", () => {
-  it("is 1 for an empty register, then max + 1 including voided members", async () => {
+  it("is 1 for an empty register, then highest number + 1", async () => {
     expect(await (await call("/api/members/next")).json()).toEqual({ next: 1 });
-    await issue(["陳大文", "李小梅"]);
-    await call("/api/members/2", { method: "PATCH", body: JSON.stringify({ voided: true }) });
-    expect(await (await call("/api/members/next")).json()).toEqual({ next: 3 });
+    await issue(["陳大文", "李小梅", "黃志明"]);
+    await call("/api/members/2", { method: "DELETE" });
+    expect(await (await call("/api/members/next")).json()).toEqual({ next: 4 });
+  });
+});
+
+describe("setting the next number", () => {
+  const setNext = (next) => call("/api/members/next", { method: "PUT", body: JSON.stringify({ next }) });
+
+  it("makes new batches continue from the chosen number", async () => {
+    const res = await setNext(50);
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ next: 50 });
+    expect(await (await call("/api/members/next")).json()).toEqual({ next: 50 });
+    const { members } = await (await issue(["陳大文", "李小梅"])).json();
+    expect(members.map((m) => m.number)).toEqual([50, 51]);
+    expect(await (await call("/api/members/next")).json()).toEqual({ next: 52 });
+  });
+
+  it("can be lowered again, but not to or below the highest existing number", async () => {
+    await setNext(50);
+    await issue(["陳大文", "李小梅", "黃志明"]); // 50, 51, 52
+    const low = await setNext(52);
+    expect(low.status).toBe(409);
+    expect(await low.json()).toEqual({ error: "too_low", highest: 52 });
+    expect((await setNext(60)).status).toBe(200);
+    expect((await setNext(53)).status).toBe(200);
+    expect(await (await call("/api/members/next")).json()).toEqual({ next: 53 });
+  });
+
+  it("rejects numbers that are not positive whole numbers", async () => {
+    for (const next of [0, -1, 2.5, "abc", 100000]) expect((await setNext(next)).status).toBe(400);
   });
 });
 

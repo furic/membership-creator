@@ -65,8 +65,10 @@ Dates:
 **永久會員 (lifetime members)**, added 2026-11-04: an option per batch, off by default. When it is on, there is no expiry date. The back of the card shows only 「永久會員」, large and centred in the club purple, and the register shows 永久會員 in the 有效日期 column. Stored as `lifetime = 1` with `expiry_date = NULL` (migration `0002_lifetime.sql`).
 
 **Later additions (2026-11-04):**
-- The issue preview shows the expected numbers (`GET /api/members/next` = highest number + 1, voided included). They are final only after 確認並編號.
-- 會員名單 has 修改編號. Saving a number that is already used (also by a voided member) is refused with a warning naming the holder (API `409 {error:"duplicate", number, name}`). New members still get highest + 1.
+- The issue preview shows the expected numbers (`GET /api/members/next` = highest number + 1). They are final only after 確認並編號.
+- 會員名單 has 修改編號. Saving a number that is already used is refused with a warning naming the holder (API `409 {error:"duplicate", number, name}`). New members still get highest + 1.
+- 作廢 was replaced by 刪除: permanent deletion (`DELETE /api/members/:number`). A deleted member's number is free again. Existing voided rows were removed by migration `0003_delete_voided.sql`.
+- 新增會員 shows 「下一個會員編號」 with a 設定 button. The chosen number is stored as `settings.next_number` (`PUT /api/members/next`). The next number is max(highest + 1, setting). A value at or below the highest existing number is refused (`409 {error:"too_low", highest}`).
 
 Number: zero-padded to 3 digits (`001`). Past 999 it simply grows (`1000`). (My call.)
 

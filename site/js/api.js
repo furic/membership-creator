@@ -55,14 +55,13 @@ export const ping = (code) => request("/api/ping", { code });
 export const issue = async (names, issueDate, expiryDate, lifetime = false) =>
   (await request("/api/members", { method: "POST", body: { names, issueDate, expiryDate, lifetime } })).members;
 
-export const list = async (q = "", includeVoided = false) => {
-  const params = new URLSearchParams();
-  if (q) params.set("q", q);
-  if (includeVoided) params.set("voided", "1");
-  return (await request(`/api/members?${params}`)).members;
-};
+export const list = async (q = "") => (await request(`/api/members?${new URLSearchParams(q ? { q } : {})}`)).members;
 
 export const nextNumber = async () => (await request("/api/members/next")).next;
 
+export const setNextNumber = async (next) => (await request("/api/members/next", { method: "PUT", body: { next } })).next;
+
 export const update = async (number, patch) =>
   (await request(`/api/members/${number}`, { method: "PATCH", body: patch })).member;
+
+export const remove = (number) => request(`/api/members/${number}`, { method: "DELETE" });

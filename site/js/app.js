@@ -86,6 +86,7 @@ let nextNumber = null; // expected number of the first name, for the preview
 async function refreshNextNumber() {
   try {
     nextNumber = await api.nextNumber();
+    $("next-number").textContent = formatNumber(nextNumber);
   } catch (err) {
     nextNumber = null;
     if (err instanceof api.AuthError) return handleError(err);
@@ -156,6 +157,24 @@ $("issue-btn").addEventListener("click", async () => {
   }
 });
 
+$("set-next-btn").addEventListener("click", async () => {
+  const input = prompt("設定下一個新會員的編號：", nextNumber == null ? "" : formatNumber(nextNumber))?.trim();
+  if (!input) return;
+  const next = /^\d+$/.test(input) ? Number(input) : NaN;
+  if (!Number.isInteger(next) || next < 1 || next > 99999) {
+    alert("會員編號必須是 1 至 99999 的數字。");
+    return;
+  }
+  try {
+    await api.setNextNumber(next);
+    showStatus(`下一個會員編號已設為 ${formatNumber(next)}。`);
+  } catch (err) {
+    if (err.status !== 409) return handleError(err);
+    alert(`下一個編號必須大於現有最大的會員編號 ${formatNumber(err.data.highest)}。`);
+  }
+  await refreshNextNumber();
+});
+
 window.addEventListener("focus", () => {
   if (!$("view-issue").hidden && !issued) refreshNextNumber();
 });
@@ -183,7 +202,7 @@ let loadSeq = 0;
 async function loadMembers() {
   const seq = ++loadSeq;
   try {
-    const result = await api.list($("search").value.trim(), $("show-voided").checked);
+    const result = await api.list($("search").value.trim());
     if (seq !== loadSeq) return;
     members = result;
     renderMembers();
@@ -195,16 +214,16 @@ async function loadMembers() {
 function renderMembers() {
   $("members").innerHTML = members
     .map(
-      (m) => `<tr class="${m.voided ? "voided" : ""}">
+      (m) => `<tr>
         <td><input type="checkbox" data-select="${m.number}" ${selected.has(m.number) ? "checked" : ""}></td>
         <td>${formatNumber(m.number)}</td>
-        <td>${escapeHtml(m.name)}${m.voided ? ' <span class="tag">已作廢</span>' : ""}</td>
+        <td>${escapeHtml(m.name)}</td>
         <td>${formatDMY(m.issueDate)}</td>
         <td>${m.lifetime ? "永久會員" : formatDMY(m.expiryDate)}</td>
         <td class="row-actions">
           <button type="button" data-rename="${m.number}">修改姓名</button>
           <button type="button" data-renumber="${m.number}">修改編號</button>
-          <button type="button" data-void="${m.number}">${m.voided ? "恢復" : "作廢"}</button>
+          <button type="button" class="danger" data-delete="${m.number}">刪除</button>
         </td>
       </tr>`,
     )
@@ -220,7 +239,6 @@ $("search").addEventListener("input", () => {
   clearTimeout(searchTimer);
   searchTimer = setTimeout(loadMembers, 250);
 });
-$("show-voided").addEventListener("change", loadMembers);
 
 $("select-all").addEventListener("change", (e) => {
   for (const m of members) e.target.checked ? selected.add(m.number) : selected.delete(m.number);
@@ -245,8 +263,8 @@ $("members").addEventListener("change", (e) => {
 $("members").addEventListener("click", async (e) => {
   const renameNo = Number(e.target.dataset.rename);
   const renumberNo = Number(e.target.dataset.renumber);
-  const voidNo = Number(e.target.dataset.void);
-  const m = members.find((x) => x.number === (renameNo || renumberNo || voidNo));
+  const deleteNo = Number(e.target.dataset.delete);
+  const m = members.find((x) => x.number === (renameNo || renumberNo || deleteNo));
   if (!m) return;
   try {
     if (renumberNo) {
@@ -275,10 +293,11 @@ $("members").addEventListener("click", async (e) => {
       await api.update(m.number, { name });
       showStatus(`已更新 ${formatNumber(m.number)} 的姓名。`);
     } else {
-      const voiding = !m.voided;
-      if (voiding && !confirm(`確定作廢 ${formatNumber(m.number)} ${m.name}？（編號不會重用）`)) return;
-      await api.update(m.number, { voided: voiding });
-      showStatus(`${formatNumber(m.number)} 已${voiding ? "作廢" : "恢復"}。`);
+      if (!confirm(`確定永久刪除 ${formatNumber(m.number)} ${m.name}？刪除後無法復原。`)) return;
+      await api.remove(m.number);
+      selected.delete(m.number);
+      memberCache.delete(m.number);
+      showStatus(`已刪除 ${formatNumber(m.number)} ${m.name}。`);
     }
     await loadMembers();
   } catch (err) {

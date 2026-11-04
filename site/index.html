@@ -50,6 +50,8 @@
             <label class="check lifetime-check"><input id="lifetime" type="checkbox"> 永久會員（不設有效日期）</label>
             <p class="hint" id="expiry-hint"></p>
             <p class="hint" id="count-hint"></p>
+            <p class="hint next-line">下一個會員編號：<strong id="next-number">—</strong>
+              <button type="button" id="set-next-btn" class="small">設定</button></p>
             <div class="actions">
               <button type="button" id="issue-btn" class="primary" disabled>確認並編號</button>
               <button type="button" id="print-btn" class="primary" hidden>列印</button>
@@ -69,7 +71,6 @@
         <h1>會員名單</h1>
         <div class="toolbar">
           <input id="search" type="search" placeholder="搜尋姓名或會員編號">
-          <label class="check"><input id="show-voided" type="checkbox"> 顯示已作廢</label>
           <button type="button" id="reprint-btn" class="primary" disabled>重印所選</button>
         </div>
         <p class="hint print-tip">列印時請選 A4、實際大小（100%），並關閉頁首及頁尾。</p>

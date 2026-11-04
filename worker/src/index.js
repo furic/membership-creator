@@ -7,6 +7,12 @@ const MAX_BATCH = 100;
 const MAX_NAME = 30;
 const MAX_NUMBER = 99999;
 
+// Next number = highest existing + 1, but never below the `next_number` setting.
+const NEXT_NUMBER_SQL = `MAX(
+  (SELECT COALESCE(MAX(number), 0) + 1 FROM members),
+  COALESCE((SELECT CAST(value AS INTEGER) FROM settings WHERE key = 'next_number'), 1)
+)`;
+
 class HttpError extends Error {
   constructor(status, message, details = {}) {
     super(message);
@@ -20,7 +26,6 @@ const toMember = (row) => ({
   name: row.name,
   issueDate: row.issue_date,
   expiryDate: row.expiry_date,
-  voided: Boolean(row.voided),
   lifetime: Boolean(row.lifetime),
 });
 
@@ -29,7 +34,7 @@ function corsHeaders(request) {
   if (!origin || !ALLOWED_ORIGINS.some((re) => re.test(origin))) return {};
   return {
     "Access-Control-Allow-Origin": origin,
-    "Access-Control-Allow-Methods": "GET, POST, PATCH, OPTIONS",
+    "Access-Control-Allow-Methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS",
     "Access-Control-Allow-Headers": "Authorization, Content-Type",
     "Access-Control-Max-Age": "86400",
     Vary: "Origin",
@@ -69,7 +74,7 @@ async function issueMembers(env, body) {
   // 永久會員 have no expiry date.
   const insert = env.DB.prepare(
     `INSERT INTO members (number, name, issue_date, expiry_date, lifetime)
-     SELECT COALESCE(MAX(number), 0) + 1, ?, ?, ?, ? FROM members
+     VALUES (${NEXT_NUMBER_SQL}, ?, ?, ?, ?)
      RETURNING *`,
   );
   const results = await env.DB.batch(
@@ -80,10 +85,8 @@ async function issueMembers(env, body) {
 
 async function listMembers(env, url) {
   const q = (url.searchParams.get("q") ?? "").trim();
-  const includeVoided = url.searchParams.get("voided") === "1";
   const where = [];
   const params = [];
-  if (!includeVoided) where.push("voided = 0");
   if (q) {
     if (/^\d+$/.test(q)) {
       where.push("(number = ? OR name LIKE ?)");
@@ -98,9 +101,20 @@ async function listMembers(env, url) {
   return results.map(toMember);
 }
 
-// The number the next issued member would get, for previews. Voided numbers stay used.
+// The number the next issued member would get, for previews.
 async function nextNumber(env) {
-  return (await env.DB.prepare("SELECT COALESCE(MAX(number), 0) + 1 AS next FROM members").first()).next;
+  return (await env.DB.prepare(`SELECT ${NEXT_NUMBER_SQL} AS next`).first()).next;
+}
+
+async function setNextNumber(env, body) {
+  const next = body?.next;
+  if (!Number.isInteger(next) || next < 1 || next > MAX_NUMBER) throw new HttpError(400, "invalid number");
+  const { highest } = await env.DB.prepare("SELECT COALESCE(MAX(number), 0) AS highest FROM members").first();
+  if (next <= highest) throw new HttpError(409, "too_low", { highest });
+  await env.DB.prepare("INSERT INTO settings (key, value) VALUES ('next_number', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value")
+    .bind(String(next))
+    .run();
+  return next;
 }
 
 async function updateMember(env, number, body) {
@@ -110,14 +124,9 @@ async function updateMember(env, number, body) {
     sets.push("name = ?");
     params.push(cleanName(body.name));
   }
-  if (body?.voided !== undefined) {
-    sets.push("voided = ?");
-    params.push(body.voided ? 1 : 0);
-  }
   if (body?.number !== undefined && body.number !== number) {
     const newNumber = body.number;
     if (!Number.isInteger(newNumber) || newNumber < 1 || newNumber > MAX_NUMBER) throw new HttpError(400, "invalid number");
-    // Voided members keep their numbers, so they count as taken too.
     const holder = await env.DB.prepare("SELECT name FROM members WHERE number = ?").bind(newNumber).first();
     if (holder) throw new HttpError(409, "duplicate", { number: newNumber, name: holder.name });
     sets.push("number = ?");
@@ -145,6 +154,11 @@ async function updateMember(env, number, body) {
   return toMember(row);
 }
 
+async function deleteMember(env, number) {
+  const { meta } = await env.DB.prepare("DELETE FROM members WHERE number = ?").bind(number).run();
+  if (!meta.changes) throw new HttpError(404, "not found");
+}
+
 async function route(request, env) {
   const url = new URL(request.url);
   const { pathname } = url;
@@ -155,10 +169,15 @@ async function route(request, env) {
   if (pathname === "/api/ping" && method === "GET") return [200, { ok: true }];
   if (pathname === "/api/members" && method === "GET") return [200, { members: await listMembers(env, url) }];
   if (pathname === "/api/members/next" && method === "GET") return [200, { next: await nextNumber(env) }];
+  if (pathname === "/api/members/next" && method === "PUT") return [200, { next: await setNextNumber(env, await readJson(request)) }];
   if (pathname === "/api/members" && method === "POST") return [201, { members: await issueMembers(env, await readJson(request)) }];
 
   const match = pathname.match(/^\/api\/members\/(\d+)$/);
   if (match && method === "PATCH") return [200, { member: await updateMember(env, Number(match[1]), await readJson(request)) }];
+  if (match && method === "DELETE") {
+    await deleteMember(env, Number(match[1]));
+    return [200, { deleted: Number(match[1]) }];
+  }
 
   throw new HttpError(404, "not found");
 }

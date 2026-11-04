@@ -261,23 +261,23 @@ th {
   font-weight: 700;
 }
 
-tr.voided td {
-  color: var(--muted);
-  text-decoration: line-through;
+button.danger {
+  color: var(--error);
 }
 
-tr.voided td.row-actions,
-tr.voided td:first-child {
-  text-decoration: none;
+button.danger:hover:not(:disabled) {
+  border-color: var(--error);
 }
 
-.tag {
-  display: inline-block;
-  font-size: 12px;
-  padding: 0 6px;
-  border-radius: 4px;
-  background: #eee;
-  text-decoration: none;
+.next-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+button.small {
+  padding: 2px 10px;
+  font-size: 13px;
 }
 
 .row-actions button {
