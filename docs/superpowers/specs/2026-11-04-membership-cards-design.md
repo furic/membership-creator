@@ -40,7 +40,7 @@ Size, when folded: 85.6 × 54 mm (bank-card size). Each half has a rounded dark 
 **Front (正面)**, layout "A":
 
 - Top left: the club stamp as the logo. Use `site/assets/stamp.png`, which has already been prepared from `references/06f2ed783d15f6de3ac0df25b9ab1115.jpg`: trimmed to the seal's edge with a 4px margin, with a transparent background and ink colour `#543c7d`. It is about 24 mm wide on the card.
-- To the right of the stamp, vertically centred with it, in the stamp's purple `#543c7d`, bold, on two lines broken as the stamp is:
+- To the right of the stamp, vertically centred with it, in a muted brick red `#a3302f` (changed from the stamp purple on 2026-11-05), bold, on two lines broken as the stamp is:
   `澳門中國民族服飾` / `愛好者協會`
 - `會員證`: large, bold, centred.
 - Four rows, with labels justified to the same width:

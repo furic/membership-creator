@@ -63,7 +63,7 @@
 
 .club {
   flex: 1;
-  color: #543c7d;
+  color: #a3302f; /* muted brick red: reads as seal red without shouting */
   font-size: 4.6mm;
   font-weight: 700;
   line-height: 1.3;
