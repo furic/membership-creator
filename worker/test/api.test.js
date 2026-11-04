@@ -97,6 +97,44 @@ describe("register", () => {
   });
 });
 
+describe("renumbering", () => {
+  const patch = (n, body) => call(`/api/members/${n}`, { method: "PATCH", body: JSON.stringify(body) });
+
+  it("moves a member to a free number", async () => {
+    await issue(["陳大文", "李小梅"]);
+    const res = await patch(2, { number: 10 });
+    expect(res.status).toBe(200);
+    expect((await res.json()).member).toMatchObject({ number: 10, name: "李小梅" });
+    const all = await (await call("/api/members")).json();
+    expect(all.members.map((m) => m.number)).toEqual([10, 1]);
+    expect(await (await call("/api/members/next")).json()).toEqual({ next: 11 });
+  });
+
+  it("refuses a number that is already used, even by a voided member, and says by whom", async () => {
+    await issue(["陳大文", "李小梅", "黃志明"]);
+    await patch(3, { voided: true });
+    const taken = await patch(1, { number: 2 });
+    expect(taken.status).toBe(409);
+    expect(await taken.json()).toEqual({ error: "duplicate", number: 2, name: "李小梅" });
+    expect((await patch(1, { number: 3 })).status).toBe(409);
+    expect((await patch(1, { number: 1 })).status).toBe(200); // same number is a no-op
+  });
+
+  it("rejects numbers that are not positive whole numbers", async () => {
+    await issue(["陳大文"]);
+    for (const number of [0, -1, 1.5, "abc", 100000]) expect((await patch(1, { number })).status).toBe(400);
+  });
+});
+
+describe("next number", () => {
+  it("is 1 for an empty register, then max + 1 including voided members", async () => {
+    expect(await (await call("/api/members/next")).json()).toEqual({ next: 1 });
+    await issue(["陳大文", "李小梅"]);
+    await call("/api/members/2", { method: "PATCH", body: JSON.stringify({ voided: true }) });
+    expect(await (await call("/api/members/next")).json()).toEqual({ next: 3 });
+  });
+});
+
 describe("cors", () => {
   const preflight = (origin) =>
     exports.default.fetch(new Request(BASE + "/api/members", {

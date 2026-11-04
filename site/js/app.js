@@ -34,6 +34,7 @@ function show(view) {
   document.querySelector(".tabs").hidden = view === "login";
   for (const tab of document.querySelectorAll(".tab[data-view]")) tab.classList.toggle("active", tab.dataset.view === view);
   if (view === "register") loadMembers();
+  if (view === "issue" && !issued) refreshNextNumber();
   if (view === "login") $("login-code").focus();
 }
 
@@ -80,12 +81,29 @@ for (const tab of document.querySelectorAll(".tab[data-view]")) tab.addEventList
 
 let issued = null; // members returned by the API for the current batch
 let issuing = false;
+let nextNumber = null; // expected number of the first name, for the preview
+
+async function refreshNextNumber() {
+  try {
+    nextNumber = await api.nextNumber();
+  } catch (err) {
+    nextNumber = null;
+    if (err instanceof api.AuthError) return handleError(err);
+  }
+  refreshIssue();
+}
 
 function draftCards() {
   const issueDate = todayISO();
   const lifetime = $("lifetime").checked;
   const expiryDate = lifetime ? null : $("expiry").value || addYears(issueDate, 1);
-  return parseNames($("names").value).map((name) => ({ name, number: null, issueDate, expiryDate, lifetime }));
+  return parseNames($("names").value).map((name, i) => ({
+    name,
+    number: nextNumber == null ? null : nextNumber + i,
+    issueDate,
+    expiryDate,
+    lifetime,
+  }));
 }
 
 function refreshIssue() {
@@ -100,7 +118,12 @@ function refreshIssue() {
     const prefix = issued || $("expiry").value ? "有效日期：" : "留空即為一年後：";
     $("expiry-hint").textContent = `${prefix}${formatDMY(first)}、${formatDMY(addYears(first, 1))}、${formatDMY(addYears(first, 2))}`;
   }
-  $("count-hint").textContent = cards.length ? `共 ${cards.length} 位，需 ${Math.ceil(cards.length / 5)} 張 A4 紙。` : "";
+  const sheets = `共 ${cards.length} 位，需 ${Math.ceil(cards.length / 5)} 張 A4 紙。`;
+  const expected =
+    !issued && cards.length && nextNumber != null
+      ? `預計編號 ${formatNumber(nextNumber)}${cards.length > 1 ? "–" + formatNumber(nextNumber + cards.length - 1) : ""}（如同時有其他人新增，以確認後為準）。`
+      : "";
+  $("count-hint").textContent = cards.length ? sheets + expected : "";
 
   $("issue-btn").hidden = Boolean(issued);
   $("issue-btn").disabled = issuing || !cards.length;
@@ -133,6 +156,10 @@ $("issue-btn").addEventListener("click", async () => {
   }
 });
 
+window.addEventListener("focus", () => {
+  if (!$("view-issue").hidden && !issued) refreshNextNumber();
+});
+
 $("print-btn").addEventListener("click", () => printCards(issued));
 
 $("new-batch-btn").addEventListener("click", () => {
@@ -142,6 +169,7 @@ $("new-batch-btn").addEventListener("click", () => {
   $("lifetime").checked = false;
   $("issued-msg").textContent = "";
   refreshIssue();
+  refreshNextNumber();
   $("names").focus();
 });
 
@@ -175,6 +203,7 @@ function renderMembers() {
         <td>${m.lifetime ? "永久會員" : formatDMY(m.expiryDate)}</td>
         <td class="row-actions">
           <button type="button" data-rename="${m.number}">修改姓名</button>
+          <button type="button" data-renumber="${m.number}">修改編號</button>
           <button type="button" data-void="${m.number}">${m.voided ? "恢復" : "作廢"}</button>
         </td>
       </tr>`,
@@ -215,11 +244,32 @@ $("members").addEventListener("change", (e) => {
 
 $("members").addEventListener("click", async (e) => {
   const renameNo = Number(e.target.dataset.rename);
+  const renumberNo = Number(e.target.dataset.renumber);
   const voidNo = Number(e.target.dataset.void);
-  const m = members.find((x) => x.number === (renameNo || voidNo));
+  const m = members.find((x) => x.number === (renameNo || renumberNo || voidNo));
   if (!m) return;
   try {
-    if (renameNo) {
+    if (renumberNo) {
+      const input = prompt(`修改「${m.name}」的會員編號：`, formatNumber(m.number))?.trim();
+      if (!input) return;
+      const number = /^\d+$/.test(input) ? Number(input) : NaN;
+      if (!Number.isInteger(number) || number < 1 || number > 99999) {
+        alert("會員編號必須是 1 至 99999 的數字。");
+        return;
+      }
+      if (number === m.number) return;
+      try {
+        await api.update(m.number, { number });
+      } catch (err) {
+        if (err.status !== 409) throw err;
+        const who = err.data?.name ? `「${err.data.name}」` : "其他會員";
+        alert(`會員編號 ${formatNumber(number)} 已被${who}使用，未有修改。請選擇其他編號。`);
+        return;
+      }
+      if (selected.delete(m.number)) selected.add(number);
+      memberCache.delete(m.number);
+      showStatus(`「${m.name}」的會員編號已由 ${formatNumber(m.number)} 改為 ${formatNumber(number)}。`);
+    } else if (renameNo) {
       const name = prompt(`修改 ${formatNumber(m.number)} 的姓名：`, m.name)?.trim();
       if (!name || name === m.name) return;
       await api.update(m.number, { name });

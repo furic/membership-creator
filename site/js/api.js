@@ -41,7 +41,12 @@ async function request(path, { method = "GET", body, code = passcode.get() } = {
   }
   if (res.status === 401) throw new AuthError("密碼錯誤");
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(`操作失敗（${data.error || res.status}）`);
+  if (!res.ok) {
+    const err = new Error(`操作失敗（${data.error || res.status}）`);
+    err.status = res.status;
+    err.data = data;
+    throw err;
+  }
   return data;
 }
 
@@ -56,6 +61,8 @@ export const list = async (q = "", includeVoided = false) => {
   if (includeVoided) params.set("voided", "1");
   return (await request(`/api/members?${params}`)).members;
 };
+
+export const nextNumber = async () => (await request("/api/members/next")).next;
 
 export const update = async (number, patch) =>
   (await request(`/api/members/${number}`, { method: "PATCH", body: patch })).member;

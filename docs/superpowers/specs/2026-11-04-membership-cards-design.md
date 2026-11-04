@@ -64,6 +64,10 @@ Dates:
 
 **永久會員 (lifetime members)**, added 2026-11-04: an option per batch, off by default. When it is on, there is no expiry date. The back of the card shows only 「永久會員」, large and centred in the club purple, and the register shows 永久會員 in the 有效日期 column. Stored as `lifetime = 1` with `expiry_date = NULL` (migration `0002_lifetime.sql`).
 
+**Later additions (2026-11-04):**
+- The issue preview shows the expected numbers (`GET /api/members/next` = highest number + 1, voided included). They are final only after 確認並編號.
+- 會員名單 has 修改編號. Saving a number that is already used (also by a voided member) is refused with a warning naming the holder (API `409 {error:"duplicate", number, name}`). New members still get highest + 1.
+
 Number: zero-padded to 3 digits (`001`). Past 999 it simply grows (`1000`). (My call.)
 
 Language: everything is Traditional Chinese, with `lang="zh-Hant-MO"`. Use a Traditional Chinese web font such as Noto Sans TC, so cards look the same on every computer. (Font choice is my call.)

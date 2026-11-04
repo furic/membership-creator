@@ -5,11 +5,13 @@ const ALLOWED_ORIGINS = [/^https:\/\/furic\.github\.io$/, /^http:\/\/(localhost|
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 const MAX_BATCH = 100;
 const MAX_NAME = 30;
+const MAX_NUMBER = 99999;
 
 class HttpError extends Error {
-  constructor(status, message) {
+  constructor(status, message, details = {}) {
     super(message);
     this.status = status;
+    this.details = details;
   }
 }
 
@@ -96,6 +98,11 @@ async function listMembers(env, url) {
   return results.map(toMember);
 }
 
+// The number the next issued member would get, for previews. Voided numbers stay used.
+async function nextNumber(env) {
+  return (await env.DB.prepare("SELECT COALESCE(MAX(number), 0) + 1 AS next FROM members").first()).next;
+}
+
 async function updateMember(env, number, body) {
   const sets = [];
   const params = [];
@@ -107,10 +114,33 @@ async function updateMember(env, number, body) {
     sets.push("voided = ?");
     params.push(body.voided ? 1 : 0);
   }
-  if (!sets.length) throw new HttpError(400, "nothing to update");
-  const row = await env.DB.prepare(`UPDATE members SET ${sets.join(", ")} WHERE number = ? RETURNING *`)
-    .bind(...params, number)
-    .first();
+  if (body?.number !== undefined && body.number !== number) {
+    const newNumber = body.number;
+    if (!Number.isInteger(newNumber) || newNumber < 1 || newNumber > MAX_NUMBER) throw new HttpError(400, "invalid number");
+    // Voided members keep their numbers, so they count as taken too.
+    const holder = await env.DB.prepare("SELECT name FROM members WHERE number = ?").bind(newNumber).first();
+    if (holder) throw new HttpError(409, "duplicate", { number: newNumber, name: holder.name });
+    sets.push("number = ?");
+    params.push(newNumber);
+  }
+  if (!sets.length) {
+    if (body?.number === number) {
+      const row = await env.DB.prepare("SELECT * FROM members WHERE number = ?").bind(number).first();
+      if (!row) throw new HttpError(404, "not found");
+      return toMember(row);
+    }
+    throw new HttpError(400, "nothing to update");
+  }
+  let row;
+  try {
+    row = await env.DB.prepare(`UPDATE members SET ${sets.join(", ")} WHERE number = ? RETURNING *`)
+      .bind(...params, number)
+      .first();
+  } catch (err) {
+    // Someone took the number between the check and the update.
+    if (/UNIQUE|PRIMARY KEY/i.test(String(err))) throw new HttpError(409, "duplicate", { number: body.number });
+    throw err;
+  }
   if (!row) throw new HttpError(404, "not found");
   return toMember(row);
 }
@@ -124,6 +154,7 @@ async function route(request, env) {
 
   if (pathname === "/api/ping" && method === "GET") return [200, { ok: true }];
   if (pathname === "/api/members" && method === "GET") return [200, { members: await listMembers(env, url) }];
+  if (pathname === "/api/members/next" && method === "GET") return [200, { next: await nextNumber(env) }];
   if (pathname === "/api/members" && method === "POST") return [201, { members: await issueMembers(env, await readJson(request)) }];
 
   const match = pathname.match(/^\/api\/members\/(\d+)$/);
@@ -142,7 +173,7 @@ export default {
       [status, body] = await route(request, env);
     } catch (err) {
       status = err instanceof HttpError ? err.status : 500;
-      body = { error: err instanceof HttpError ? err.message : "server error" };
+      body = err instanceof HttpError ? { error: err.message, ...err.details } : { error: "server error" };
       if (status === 500) console.error(err);
     }
     return Response.json(body, { status, headers: cors });
