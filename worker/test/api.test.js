@@ -28,6 +28,53 @@ describe("auth", () => {
   });
 });
 
+describe("changing the passcode", () => {
+  const change = (current, next, auth = "test-pass") =>
+    call("/api/passcode", {
+      method: "PUT",
+      headers: { Authorization: `Bearer ${auth}` },
+      body: JSON.stringify({ current, next }),
+    });
+  const ping = (code) => call("/api/ping", { headers: { Authorization: `Bearer ${code}` } });
+
+  it("replaces the passcode: the new one works, the old one stops working", async () => {
+    const res = await change("test-pass", "new-pass-1");
+    expect(res.status).toBe(200);
+    expect((await ping("new-pass-1")).status).toBe(200);
+    expect((await ping("test-pass")).status).toBe(401);
+
+    expect((await change("new-pass-1", "third pass", "new-pass-1")).status).toBe(200);
+    expect((await ping("third pass")).status).toBe(200);
+    expect((await ping("new-pass-1")).status).toBe(401);
+  });
+
+  it("does not store the passcode in plain text", async () => {
+    await change("test-pass", "new-pass-1");
+    const row = await env.DB.prepare("SELECT value FROM settings WHERE key = 'passcode'").first();
+    expect(row.value).not.toContain("new-pass-1");
+  });
+
+  it("falls back to the PASSCODE secret when the stored passcode is removed", async () => {
+    await change("test-pass", "new-pass-1");
+    await env.DB.exec("DELETE FROM settings WHERE key = 'passcode'");
+    expect((await ping("test-pass")).status).toBe(200);
+  });
+
+  it("requires the current passcode", async () => {
+    const res = await change("wrong", "new-pass-1");
+    expect(res.status).toBe(403);
+    expect(await res.json()).toEqual({ error: "wrong_current" });
+    expect((await ping("test-pass")).status).toBe(200);
+  });
+
+  it("rejects passcodes that are too short, too long, padded or not plain ASCII", async () => {
+    for (const next of ["12345", "x".repeat(65), " padded", "padded ", "會員密碼123", 123456, ""]) {
+      expect((await change("test-pass", next)).status).toBe(400);
+    }
+    expect((await ping("test-pass")).status).toBe(200);
+  });
+});
+
 describe("issuing", () => {
   it("numbers a batch in input order", async () => {
     const res = await issue(["陳大文", "李小梅", "黃志明"]);

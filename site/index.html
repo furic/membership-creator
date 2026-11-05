@@ -19,7 +19,7 @@
       <nav class="tabs" hidden>
         <button type="button" data-view="issue" class="tab">新增會員</button>
         <button type="button" data-view="register" class="tab">會員名單</button>
-        <button type="button" id="logout" class="tab subtle">登出</button>
+        <button type="button" data-view="settings" class="tab">設定</button>
       </nav>
     </header>
 
@@ -50,8 +50,7 @@
             <label class="check lifetime-check"><input id="lifetime" type="checkbox"> 永久會員（不設有效日期）</label>
             <p class="hint" id="expiry-hint"></p>
             <p class="hint" id="count-hint"></p>
-            <p class="hint next-line">下一個會員編號：<strong id="next-number">—</strong>
-              <button type="button" id="set-next-btn" class="small">設定</button></p>
+            <p class="hint">下一個會員編號：<strong id="next-number">—</strong>（可於「設定」更改）</p>
             <div class="actions">
               <button type="button" id="issue-btn" class="primary" disabled>確認並編號</button>
               <button type="button" id="print-btn" class="primary" hidden>列印</button>
@@ -86,6 +85,38 @@
           </table>
           <p id="empty" class="hint" hidden>沒有會員記錄。</p>
         </div>
+      </div>
+    </section>
+
+    <section id="view-settings" class="view" hidden>
+      <div class="settings">
+        <form id="next-form" class="panel">
+          <h1>下一個會員編號</h1>
+          <p class="hint">下一位新會員會由此編號開始，之後順序遞增。必須大於現有最大的會員編號。</p>
+          <label>下一個會員編號
+            <input id="next-input" type="text" inputmode="numeric" pattern="\d{1,5}" maxlength="5" required>
+          </label>
+          <p id="next-error" class="error" hidden></p>
+          <div class="actions"><button type="submit" class="primary">儲存</button></div>
+        </form>
+
+        <form id="passcode-form" class="panel">
+          <h1>更改密碼</h1>
+          <p class="hint">此為協會共用密碼。更改後，其他電腦須輸入新密碼才能繼續使用。</p>
+          <input type="text" autocomplete="username" value="協會" hidden>
+          <label>現時密碼
+            <input id="pc-current" type="password" autocomplete="current-password" required>
+          </label>
+          <label>新密碼
+            <input id="pc-next" type="password" autocomplete="new-password" minlength="6" maxlength="64" required>
+          </label>
+          <label>再次輸入新密碼
+            <input id="pc-confirm" type="password" autocomplete="new-password" minlength="6" maxlength="64" required>
+          </label>
+          <p class="hint">最少 6 個字元，只可使用英文字母、數字及符號。</p>
+          <p id="pc-error" class="error" hidden></p>
+          <div class="actions"><button type="submit" class="primary">更改密碼</button></div>
+        </form>
       </div>
     </section>
   </div>

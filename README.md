@@ -6,10 +6,11 @@
 
 1. 打開網址，輸入協會共用密碼（同一部電腦只需輸入一次）。
 2. **新增會員**：每行輸入一位會員姓名。「首個有效日期」可留空，留空即為今日起計一年後；卡背會印三個有效日期，每個相隔一年。
-3. 檢查預覽無誤後，按 **確認並編號**。系統會按次序派發會員編號（001、002……），並存入會員名單。預覽會顯示預計編號，按下後才正式確定。如需由指定編號開始（例如 100），可按「下一個會員編號」旁的 **設定**（必須大於現有最大編號）。
+3. 檢查預覽無誤後，按 **確認並編號**。系統會按次序派發會員編號（001、002……），並存入會員名單。預覽會顯示預計編號，按下後才正式確定。如需由指定編號開始（例如 100），可到 **設定** 更改「下一個會員編號」（必須大於現有最大編號）。
 4. 按 **列印**。列印設定請選 **A4**、**實際大小（100%）**，並**關閉頁首及頁尾**。每張 A4 可印 5 張會員證。
 5. 沿實線剪下，沿中間虛線對摺：左邊是正面，右邊是背面。
 6. **會員名單**：可搜尋姓名或編號、修改姓名、修改編號（如編號已被使用會提示）、永久刪除會員，亦可勾選會員後按 **重印所選**。
+7. **設定**：更改下一個會員編號；更改協會共用密碼（需輸入現時密碼，新密碼最少 6 個字元，只可使用英文字母、數字及符號）。更改密碼後，其他電腦須輸入新密碼。
 
 ---
 
@@ -41,11 +42,19 @@ cd worker
 npx wrangler login
 npx wrangler d1 create membership                 # put the new database_id in wrangler.toml
 npx wrangler d1 migrations apply membership --remote
-npx wrangler secret put PASSCODE                  # the shared passcode; change it any time the same way
+npx wrangler secret put PASSCODE                  # the initial shared passcode
 npx wrangler deploy
 ```
 
 Then set `DEFAULT_API_BASE` in `site/js/config.js` to the deployed Worker URL, and push. If the site's address changes, update `ALLOWED_ORIGINS` in `worker/src/index.js` and redeploy the Worker.
+
+### Passcode
+
+The passcode starts as the `PASSCODE` secret. Once someone changes it on the 設定 page, a salted SHA-256 hash is stored in the `settings` table (key `passcode`) and the secret stops working. If the passcode is forgotten, delete that row to fall back to the secret:
+
+```sh
+cd worker && npx wrangler d1 execute membership --remote --command "DELETE FROM settings WHERE key = 'passcode'"
+```
 
 ### Backup
 

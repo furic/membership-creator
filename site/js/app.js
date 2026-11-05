@@ -1,10 +1,10 @@
-// Screens: 輸入密碼 → 新增會員 / 會員名單. Cards are printed from #print-root.
+// Screens: 輸入密碼 → 新增會員 / 會員名單 / 設定. Cards are printed from #print-root.
 import * as api from "./api.js";
 import { renderSheets } from "./cards.js";
 import { addYears, formatDMY, formatNumber, parseNames, todayISO } from "./lib.js";
 
 const $ = (id) => document.getElementById(id);
-const views = ["login", "issue", "register"];
+const views = ["login", "issue", "register", "settings"];
 
 // ---------- shared ----------
 
@@ -35,6 +35,7 @@ function show(view) {
   for (const tab of document.querySelectorAll(".tab[data-view]")) tab.classList.toggle("active", tab.dataset.view === view);
   if (view === "register") loadMembers();
   if (view === "issue" && !issued) refreshNextNumber();
+  if (view === "settings") openSettings();
   if (view === "login") $("login-code").focus();
 }
 
@@ -68,11 +69,6 @@ $("login-form").addEventListener("submit", async (e) => {
   } finally {
     btn.disabled = false;
   }
-});
-
-$("logout").addEventListener("click", () => {
-  api.passcode.clear();
-  show("login");
 });
 
 for (const tab of document.querySelectorAll(".tab[data-view]")) tab.addEventListener("click", () => show(tab.dataset.view));
@@ -155,24 +151,6 @@ $("issue-btn").addEventListener("click", async () => {
     issuing = false;
     refreshIssue();
   }
-});
-
-$("set-next-btn").addEventListener("click", async () => {
-  const input = prompt("設定下一個新會員的編號：", nextNumber == null ? "" : formatNumber(nextNumber))?.trim();
-  if (!input) return;
-  const next = /^\d+$/.test(input) ? Number(input) : NaN;
-  if (!Number.isInteger(next) || next < 1 || next > 99999) {
-    alert("會員編號必須是 1 至 99999 的數字。");
-    return;
-  }
-  try {
-    await api.setNextNumber(next);
-    showStatus(`下一個會員編號已設為 ${formatNumber(next)}。`);
-  } catch (err) {
-    if (err.status !== 409) return handleError(err);
-    alert(`下一個編號必須大於現有最大的會員編號 ${formatNumber(err.data.highest)}。`);
-  }
-  await refreshNextNumber();
 });
 
 window.addEventListener("focus", () => {
@@ -309,6 +287,70 @@ $("reprint-btn").addEventListener("click", () => {
   for (const m of members) if (selected.has(m.number)) memberCache.set(m.number, m);
   const cards = [...selected].sort((a, b) => a - b).map((n) => memberCache.get(n)).filter(Boolean);
   printCards(cards);
+});
+
+// ---------- 設定 ----------
+
+function showFormError(id, message) {
+  $(id).textContent = message;
+  $(id).hidden = !message;
+}
+
+async function openSettings() {
+  showFormError("next-error", "");
+  showFormError("pc-error", "");
+  $("next-input").value = "";
+  try {
+    $("next-input").value = formatNumber(await api.nextNumber());
+  } catch (err) {
+    handleError(err);
+  }
+}
+
+$("next-form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const input = $("next-input").value.trim();
+  const next = /^\d+$/.test(input) ? Number(input) : NaN;
+  if (!Number.isInteger(next) || next < 1 || next > 99999) return showFormError("next-error", "會員編號必須是 1 至 99999 的數字。");
+  const btn = e.submitter;
+  btn.disabled = true;
+  showFormError("next-error", "");
+  try {
+    await api.setNextNumber(next);
+    $("next-input").value = formatNumber(next);
+    showStatus(`下一個會員編號已設為 ${formatNumber(next)}。`);
+  } catch (err) {
+    if (err.status === 409) showFormError("next-error", `必須大於現有最大的會員編號 ${formatNumber(err.data.highest)}。`);
+    else handleError(err);
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+$("passcode-form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const current = $("pc-current").value.trim();
+  const next = $("pc-next").value.trim();
+  if (next !== $("pc-confirm").value.trim()) return showFormError("pc-error", "兩次輸入的新密碼不一致。");
+  if (next.length < 6 || next.length > 64 || !/^[\x20-\x7e]+$/.test(next)) {
+    return showFormError("pc-error", "新密碼最少 6 個字元，只可使用英文字母、數字及符號。");
+  }
+  if (next === current) return showFormError("pc-error", "新密碼與現時密碼相同。");
+  const btn = e.submitter;
+  btn.disabled = true;
+  showFormError("pc-error", "");
+  try {
+    await api.changePasscode(current, next);
+    api.passcode.set(next);
+    e.target.reset();
+    showStatus("密碼已更改。其他電腦須輸入新密碼。");
+  } catch (err) {
+    if (err.status === 403) showFormError("pc-error", "現時密碼不正確。");
+    else if (err.status === 400) showFormError("pc-error", "新密碼最少 6 個字元，只可使用英文字母、數字及符號。");
+    else handleError(err);
+  } finally {
+    btn.disabled = false;
+  }
 });
 
 // ---------- start ----------

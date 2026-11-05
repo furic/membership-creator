@@ -61,6 +61,8 @@ export const nextNumber = async () => (await request("/api/members/next")).next;
 
 export const setNextNumber = async (next) => (await request("/api/members/next", { method: "PUT", body: { next } })).next;
 
+export const changePasscode = (current, next) => request("/api/passcode", { method: "PUT", body: { current, next } });
+
 export const update = async (number, patch) =>
   (await request(`/api/members/${number}`, { method: "PATCH", body: patch })).member;
 

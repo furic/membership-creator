@@ -41,13 +41,36 @@ function corsHeaders(request) {
   };
 }
 
-function authorized(request, env) {
-  const given = new TextEncoder().encode(request.headers.get("Authorization") ?? "");
-  const expected = new TextEncoder().encode(`Bearer ${env.PASSCODE}`);
-  if (!env.PASSCODE || given.length !== expected.length) return false;
+const enc = new TextEncoder();
+
+function sameBytes(a, b) {
+  if (a.length !== b.length) return false;
   let diff = 0;
-  for (let i = 0; i < given.length; i++) diff |= given[i] ^ expected[i];
+  for (let i = 0; i < a.length; i++) diff |= a[i] ^ b[i];
   return diff === 0;
+}
+
+const hex = (buf) => [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, "0")).join("");
+
+async function hashPasscode(salt, code) {
+  return hex(await crypto.subtle.digest("SHA-256", enc.encode(`${salt}:${code}`)));
+}
+
+// The passcode set from the 設定 page (stored as "salt:sha256") replaces the PASSCODE secret.
+// Deleting the `passcode` setting row falls back to the secret again.
+async function passcodeMatches(env, code) {
+  const row = await env.DB.prepare("SELECT value FROM settings WHERE key = 'passcode'").first();
+  if (row) {
+    const [salt, stored] = row.value.split(":");
+    return sameBytes(enc.encode(await hashPasscode(salt, code)), enc.encode(stored));
+  }
+  return Boolean(env.PASSCODE) && sameBytes(enc.encode(code), enc.encode(env.PASSCODE));
+}
+
+async function authorized(request, env) {
+  const header = request.headers.get("Authorization") ?? "";
+  if (!header.startsWith("Bearer ")) return false;
+  return passcodeMatches(env, header.slice("Bearer ".length));
 }
 
 async function readJson(request) {
@@ -117,6 +140,23 @@ async function setNextNumber(env, body) {
   return next;
 }
 
+// Printable ASCII only: the passcode travels in an HTTP header, and the login form trims spaces.
+const PASSCODE_RULE = /^[\x21-\x7e](?:[\x20-\x7e]*[\x21-\x7e])?$/;
+const MIN_PASSCODE = 6;
+const MAX_PASSCODE = 64;
+
+async function changePasscode(env, body) {
+  const { current, next } = body ?? {};
+  if (typeof current !== "string" || !(await passcodeMatches(env, current))) throw new HttpError(403, "wrong_current");
+  if (typeof next !== "string" || next.length < MIN_PASSCODE || next.length > MAX_PASSCODE || !PASSCODE_RULE.test(next)) {
+    throw new HttpError(400, "invalid_passcode");
+  }
+  const salt = hex(crypto.getRandomValues(new Uint8Array(16)));
+  await env.DB.prepare("INSERT INTO settings (key, value) VALUES ('passcode', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value")
+    .bind(`${salt}:${await hashPasscode(salt, next)}`)
+    .run();
+}
+
 async function updateMember(env, number, body) {
   const sets = [];
   const params = [];
@@ -164,12 +204,16 @@ async function route(request, env) {
   const { pathname } = url;
   const method = request.method;
 
-  if (!authorized(request, env)) throw new HttpError(401, "unauthorized");
+  if (!(await authorized(request, env))) throw new HttpError(401, "unauthorized");
 
   if (pathname === "/api/ping" && method === "GET") return [200, { ok: true }];
   if (pathname === "/api/members" && method === "GET") return [200, { members: await listMembers(env, url) }];
   if (pathname === "/api/members/next" && method === "GET") return [200, { next: await nextNumber(env) }];
   if (pathname === "/api/members/next" && method === "PUT") return [200, { next: await setNextNumber(env, await readJson(request)) }];
+  if (pathname === "/api/passcode" && method === "PUT") {
+    await changePasscode(env, await readJson(request));
+    return [200, { ok: true }];
+  }
   if (pathname === "/api/members" && method === "POST") return [201, { members: await issueMembers(env, await readJson(request)) }];
 
   const match = pathname.match(/^\/api\/members\/(\d+)$/);
