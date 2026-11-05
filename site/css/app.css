@@ -314,3 +314,30 @@ button.danger:hover:not(:disabled) {
 .lifetime-check {
   margin-top: 10px;
 }
+
+.edit-dialog {
+  width: min(420px, calc(100vw - 32px));
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 20px;
+  color: var(--text);
+}
+
+.edit-dialog::backdrop {
+  background: rgb(29 27 34 / 0.45);
+}
+
+.edit-dialog form {
+  display: grid;
+  gap: 12px;
+}
+
+.edit-dialog h1,
+.edit-dialog .hint,
+.edit-dialog .actions {
+  margin: 0;
+}
+
+.edit-dialog input:disabled {
+  opacity: 0.5;
+}

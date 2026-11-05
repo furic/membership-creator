@@ -199,8 +199,7 @@ function renderMembers() {
         <td>${formatDMY(m.issueDate)}</td>
         <td>${m.lifetime ? "永久會員" : formatDMY(m.expiryDate)}</td>
         <td class="row-actions">
-          <button type="button" data-rename="${m.number}">修改姓名</button>
-          <button type="button" data-renumber="${m.number}">修改編號</button>
+          <button type="button" data-edit="${m.number}">編輯</button>
           <button type="button" class="danger" data-delete="${m.number}">刪除</button>
         </td>
       </tr>`,
@@ -239,47 +238,98 @@ $("members").addEventListener("change", (e) => {
 });
 
 $("members").addEventListener("click", async (e) => {
-  const renameNo = Number(e.target.dataset.rename);
-  const renumberNo = Number(e.target.dataset.renumber);
+  const editNo = Number(e.target.dataset.edit);
   const deleteNo = Number(e.target.dataset.delete);
-  const m = members.find((x) => x.number === (renameNo || renumberNo || deleteNo));
+  const m = members.find((x) => x.number === (editNo || deleteNo));
   if (!m) return;
+  if (editNo) return openEdit(m);
+  if (!confirm(`確定永久刪除 ${formatNumber(m.number)} ${m.name}？刪除後無法復原。`)) return;
   try {
-    if (renumberNo) {
-      const input = prompt(`修改「${m.name}」的會員編號：`, formatNumber(m.number))?.trim();
-      if (!input) return;
-      const number = /^\d+$/.test(input) ? Number(input) : NaN;
-      if (!Number.isInteger(number) || number < 1 || number > 99999) {
-        alert("會員編號必須是 1 至 99999 的數字。");
-        return;
-      }
-      if (number === m.number) return;
-      try {
-        await api.update(m.number, { number });
-      } catch (err) {
-        if (err.status !== 409) throw err;
-        const who = err.data?.name ? `「${err.data.name}」` : "其他會員";
-        alert(`會員編號 ${formatNumber(number)} 已被${who}使用，未有修改。請選擇其他編號。`);
-        return;
-      }
-      if (selected.delete(m.number)) selected.add(number);
-      memberCache.delete(m.number);
-      showStatus(`「${m.name}」的會員編號已由 ${formatNumber(m.number)} 改為 ${formatNumber(number)}。`);
-    } else if (renameNo) {
-      const name = prompt(`修改 ${formatNumber(m.number)} 的姓名：`, m.name)?.trim();
-      if (!name || name === m.name) return;
-      await api.update(m.number, { name });
-      showStatus(`已更新 ${formatNumber(m.number)} 的姓名。`);
-    } else {
-      if (!confirm(`確定永久刪除 ${formatNumber(m.number)} ${m.name}？刪除後無法復原。`)) return;
-      await api.remove(m.number);
-      selected.delete(m.number);
-      memberCache.delete(m.number);
-      showStatus(`已刪除 ${formatNumber(m.number)} ${m.name}。`);
-    }
+    await api.remove(m.number);
+    selected.delete(m.number);
+    memberCache.delete(m.number);
+    showStatus(`已刪除 ${formatNumber(m.number)} ${m.name}。`);
     await loadMembers();
   } catch (err) {
     handleError(err);
+  }
+});
+
+// ---------- 編輯會員 ----------
+
+let editing = null; // the member being edited, as loaded
+
+function openEdit(m) {
+  editing = m;
+  $("edit-number").value = formatNumber(m.number);
+  $("edit-name").value = m.name;
+  $("edit-lifetime").checked = m.lifetime;
+  $("edit-expiry").value = m.expiryDate ?? addYears(m.issueDate, 1);
+  showFormError("edit-error", "");
+  refreshEditHint();
+  $("edit-dialog").showModal();
+}
+
+function refreshEditHint() {
+  const lifetime = $("edit-lifetime").checked;
+  const first = $("edit-expiry").value;
+  $("edit-expiry").disabled = lifetime;
+  $("edit-expiry").required = !lifetime;
+  $("edit-hint").textContent = lifetime
+    ? "卡背顯示「永久會員」，不設有效日期。"
+    : first
+      ? `卡背有效日期：${formatDMY(first)}、${formatDMY(addYears(first, 1))}、${formatDMY(addYears(first, 2))}`
+      : "";
+}
+
+$("edit-lifetime").addEventListener("change", refreshEditHint);
+$("edit-expiry").addEventListener("input", refreshEditHint);
+$("edit-cancel").addEventListener("click", () => $("edit-dialog").close());
+
+$("edit-form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const m = editing;
+  const input = $("edit-number").value.trim();
+  const number = /^\d+$/.test(input) ? Number(input) : NaN;
+  if (!Number.isInteger(number) || number < 1 || number > 99999) return showFormError("edit-error", "會員編號必須是 1 至 99999 的數字。");
+  const name = $("edit-name").value.trim();
+  if (!name) return showFormError("edit-error", "請輸入姓名。");
+  const lifetime = $("edit-lifetime").checked;
+  const expiryDate = $("edit-expiry").value;
+  if (!lifetime && !expiryDate) return showFormError("edit-error", "請選擇首個有效日期，或勾選永久會員。");
+
+  const patch = {};
+  if (number !== m.number) patch.number = number;
+  if (name !== m.name) patch.name = name;
+  if (lifetime !== m.lifetime || (!lifetime && expiryDate !== m.expiryDate)) {
+    patch.lifetime = lifetime;
+    if (!lifetime) patch.expiryDate = expiryDate;
+  }
+  if (!Object.keys(patch).length) return $("edit-dialog").close();
+
+  const btn = e.submitter;
+  btn.disabled = true;
+  showFormError("edit-error", "");
+  try {
+    const updated = await api.update(m.number, patch);
+    if (selected.delete(m.number)) selected.add(updated.number);
+    memberCache.delete(m.number);
+    if (selected.has(updated.number)) memberCache.set(updated.number, updated);
+    $("edit-dialog").close();
+    showStatus(`已更新 ${formatNumber(updated.number)} ${updated.name}。`);
+    await loadMembers();
+  } catch (err) {
+    if (err.status === 409) {
+      const who = err.data?.name ? `「${err.data.name}」` : "其他會員";
+      showFormError("edit-error", `會員編號 ${formatNumber(number)} 已被${who}使用，請選擇其他編號。`);
+    } else if (err instanceof api.AuthError) {
+      $("edit-dialog").close();
+      handleError(err);
+    } else {
+      showFormError("edit-error", err.message);
+    }
+  } finally {
+    btn.disabled = false;
   }
 });
 

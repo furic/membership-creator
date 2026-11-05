@@ -86,6 +86,28 @@
           <p id="empty" class="hint" hidden>沒有會員記錄。</p>
         </div>
       </div>
+
+      <dialog id="edit-dialog" class="edit-dialog">
+        <form id="edit-form" method="dialog">
+          <h1>編輯會員</h1>
+          <label>會員編號
+            <input id="edit-number" type="text" inputmode="numeric" pattern="\d{1,5}" maxlength="5" required>
+          </label>
+          <label>姓名
+            <input id="edit-name" type="text" maxlength="30" required>
+          </label>
+          <label>首個有效日期
+            <input id="edit-expiry" type="date">
+          </label>
+          <label class="check"><input id="edit-lifetime" type="checkbox"> 永久會員（不設有效日期）</label>
+          <p class="hint" id="edit-hint"></p>
+          <p id="edit-error" class="error" hidden></p>
+          <div class="actions">
+            <button type="submit" class="primary" value="save">儲存</button>
+            <button type="button" id="edit-cancel">取消</button>
+          </div>
+        </form>
+      </dialog>
     </section>
 
     <section id="view-settings" class="view" hidden>

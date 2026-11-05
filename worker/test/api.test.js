@@ -177,6 +177,39 @@ describe("renumbering", () => {
   });
 });
 
+describe("editing the expiry date", () => {
+  const patch = (n, body) => call(`/api/members/${n}`, { method: "PATCH", body: JSON.stringify(body) });
+
+  it("changes the first expiry date", async () => {
+    await issue(["陳大文"]);
+    const res = await patch(1, { expiryDate: "2028-01-31" });
+    expect(res.status).toBe(200);
+    expect((await res.json()).member).toMatchObject({ number: 1, expiryDate: "2028-01-31", lifetime: false });
+  });
+
+  it("switches a member to lifetime and back", async () => {
+    await issue(["陳大文"]);
+    const toLifetime = await patch(1, { lifetime: true, expiryDate: "2030-01-01" });
+    expect((await toLifetime.json()).member).toMatchObject({ expiryDate: null, lifetime: true });
+    const back = await patch(1, { lifetime: false, expiryDate: "2027-12-01" });
+    expect((await back.json()).member).toMatchObject({ expiryDate: "2027-12-01", lifetime: false });
+  });
+
+  it("needs a date to leave lifetime, and rejects bad dates", async () => {
+    await issue(["陳大文"]);
+    await patch(1, { lifetime: true });
+    expect((await patch(1, { lifetime: false })).status).toBe(400);
+    expect((await patch(1, { expiryDate: "31/01/2028" })).status).toBe(400);
+    expect((await patch(1, { lifetime: "yes" })).status).toBe(400);
+  });
+
+  it("edits name, number and expiry date together", async () => {
+    await issue(["陳大文"]);
+    const res = await patch(1, { name: "陳大明", number: 5, expiryDate: "2028-02-29" });
+    expect((await res.json()).member).toMatchObject({ number: 5, name: "陳大明", expiryDate: "2028-02-29", lifetime: false });
+  });
+});
+
 describe("next number", () => {
   it("is 1 for an empty register, then highest number + 1", async () => {
     expect(await (await call("/api/members/next")).json()).toEqual({ next: 1 });

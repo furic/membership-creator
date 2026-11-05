@@ -172,6 +172,17 @@ async function updateMember(env, number, body) {
     sets.push("number = ?");
     params.push(newNumber);
   }
+  // 有效日期: `lifetime: true` clears the date; otherwise a valid first expiry date is required.
+  if (body?.lifetime !== undefined || body?.expiryDate !== undefined) {
+    if (body.lifetime !== undefined && typeof body.lifetime !== "boolean") throw new HttpError(400, "invalid lifetime");
+    if (body.lifetime === true) {
+      sets.push("lifetime = 1", "expiry_date = NULL");
+    } else {
+      if (!ISO_DATE.test(body.expiryDate ?? "")) throw new HttpError(400, "invalid date");
+      sets.push("lifetime = 0", "expiry_date = ?");
+      params.push(body.expiryDate);
+    }
+  }
   if (!sets.length) {
     if (body?.number === number) {
       const row = await env.DB.prepare("SELECT * FROM members WHERE number = ?").bind(number).first();
