@@ -56,9 +56,10 @@
   gap: 2.5mm;
 }
 
-.stamp {
+.card-logo {
   display: block;
-  width: 22mm;
+  width: 15mm; /* round logo; same height as the old 22mm-wide oval stamp, so nothing below moves */
+  height: 15mm;
 }
 
 .club {

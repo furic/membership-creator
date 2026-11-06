@@ -14,7 +14,7 @@ function front({ name, number, issueDate }) {
   const len = [...name].length;
   return `<div class="half"><div class="face front">
       <div class="head">
-        <img class="stamp" src="assets/stamp.png" alt="">
+        <img class="card-logo" src="assets/logo.png" alt="">
         <div class="club">澳門中國民族服飾<br>愛好者協會</div>
       </div>
       <div class="title">會員證</div>
