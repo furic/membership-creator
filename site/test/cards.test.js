@@ -16,9 +16,16 @@ test("numbers are padded, and unassigned ones show 待定", () => {
   assert.ok(renderSheets([card({ number: null })]).includes("待定"));
 });
 
-test("front shows the issue date, back shows three yearly expiry dates", () => {
+test("front shows the issue date, back shows the one expiry date", () => {
   const html = renderSheets([card()]);
-  for (const d of ["04/11/2026", "03/11/2027", "03/11/2028", "03/11/2029"]) assert.ok(html.includes(d), d);
+  for (const d of ["04/11/2026", "03/11/2027"]) assert.ok(html.includes(d), d);
+  assert.ok(!html.includes("03/11/2028"));
+  assert.equal(count(html, "有效日期"), 1);
+});
+
+test("cards have no signature lines", () => {
+  const html = renderSheets([card(), card({ lifetime: true, expiryDate: null })]);
+  assert.ok(!html.includes("簽名"));
 });
 
 test("lifetime cards show 永久會員 on the back instead of expiry dates", () => {

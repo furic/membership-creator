@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { addYears, formatDMY, expiryDates, parseNames, formatNumber, chunk, todayISO } from "../js/lib.js";
+import { addYears, formatDMY, parseNames, formatNumber, chunk, todayISO } from "../js/lib.js";
 
 test("addYears keeps the day, and 29/02 falls back to 28/02", () => {
   assert.equal(addYears("2027-11-03", 1), "2028-11-03");
@@ -10,11 +10,6 @@ test("addYears keeps the day, and 29/02 falls back to 28/02", () => {
 
 test("formatDMY", () => {
   assert.equal(formatDMY("2027-11-03"), "03/11/2027");
-});
-
-test("expiryDates defaults to issue date + 1 year", () => {
-  assert.deepEqual(expiryDates("2026-11-04", ""), ["2027-11-04", "2028-11-04", "2029-11-04"]);
-  assert.deepEqual(expiryDates("2026-11-04", "2027-11-03"), ["2027-11-03", "2028-11-03", "2029-11-03"]);
 });
 
 test("parseNames trims spaces, full-width spaces and blank lines", () => {

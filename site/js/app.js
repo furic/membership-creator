@@ -113,7 +113,7 @@ function refreshIssue() {
   } else {
     const first = issued ? issued[0].expiryDate : $("expiry").value || addYears(todayISO(), 1);
     const prefix = issued || $("expiry").value ? "有效日期：" : "留空即為一年後：";
-    $("expiry-hint").textContent = `${prefix}${formatDMY(first)}、${formatDMY(addYears(first, 1))}、${formatDMY(addYears(first, 2))}`;
+    $("expiry-hint").textContent = `${prefix}${formatDMY(first)}`;
   }
   const sheets = `共 ${cards.length} 位，需 ${Math.ceil(cards.length / 5)} 張 A4 紙。`;
   const expected =
@@ -278,7 +278,7 @@ function refreshEditHint() {
   $("edit-hint").textContent = lifetime
     ? "卡背顯示「永久會員」，不設有效日期。"
     : first
-      ? `卡背有效日期：${formatDMY(first)}、${formatDMY(addYears(first, 1))}、${formatDMY(addYears(first, 2))}`
+      ? `卡背有效日期：${formatDMY(first)}`
       : "";
 }
 
@@ -296,7 +296,7 @@ $("edit-form").addEventListener("submit", async (e) => {
   if (!name) return showFormError("edit-error", "請輸入姓名。");
   const lifetime = $("edit-lifetime").checked;
   const expiryDate = $("edit-expiry").value;
-  if (!lifetime && !expiryDate) return showFormError("edit-error", "請選擇首個有效日期，或勾選永久會員。");
+  if (!lifetime && !expiryDate) return showFormError("edit-error", "請選擇有效日期，或勾選永久會員。");
 
   const patch = {};
   if (number !== m.number) patch.number = number;

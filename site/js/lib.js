@@ -26,12 +26,6 @@ export function formatDMY(iso) {
   return `${pad(d)}/${pad(m)}/${y}`;
 }
 
-// The three 有效日期 printed on the back of a card.
-export function expiryDates(issueISO, firstISO) {
-  const first = firstISO || addYears(issueISO, 1);
-  return [first, addYears(first, 1), addYears(first, 2)];
-}
-
 export function parseNames(text) {
   return text.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
 }

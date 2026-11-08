@@ -71,6 +71,13 @@ Dates:
 - 作廢 was replaced by 刪除: permanent deletion (`DELETE /api/members/:number`). A deleted member's number is free again. Existing voided rows were removed by migration `0003_delete_voided.sql`.
 - 新增會員 shows 「下一個會員編號」 with a 設定 button. The chosen number is stored as `settings.next_number` (`PUT /api/members/next`). The next number is max(highest + 1, setting). A value at or below the highest existing number is refused (`409 {error:"too_low", highest}`).
 
+**Card redesign (2026-11-08), replaces the layout above:** design "D 印章楷書" (mockups: `.superpowers/brainstorm/cards-v2/content/directions-v5.html`, option D1), large print because most members are older.
+- Still a fold-over strip, 5 per A4. No rounded inner borders; the strip outline is the cut line, the dashed middle the fold.
+- Front: the club logo (`site/assets/logo.png`, cut from `logo.jpg`) top left, the club name in brick red `#a3302f` beside it, 「會員證」 as a red seal top right, a brush-stroke line, then 姓名 / 會員編號 / 簽發日期 at 5.3 mm, spread to the bottom edge.
+- No signature lines anywhere.
+- Back: one 有效日期 only (the stored `expiry_date`), very large, over a faint club stamp; lifetime members get 「永久會員」 instead. The 2nd/3rd yearly dates are gone.
+- Font: LXGW WenKai TC (楷書) from Google Fonts, falling back to the system 楷體.
+
 Number: zero-padded to 3 digits (`001`). Past 999 it simply grows (`1000`). (My call.)
 
 Language: everything is Traditional Chinese, with `lang="zh-Hant-MO"`. Use a Traditional Chinese web font such as Noto Sans TC, so cards look the same on every computer. (Font choice is my call.)
