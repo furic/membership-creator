@@ -1,4 +1,4 @@
-# 會員證製作 — 澳門中國民族服飾愛好者協會
+# 會員管理 — 澳門中國民族服飾愛好者協會
 
 網址：https://furic.github.io/membership-creator/
 
