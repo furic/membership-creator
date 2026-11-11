@@ -28,6 +28,15 @@ jobs:
       - name: Test page helpers
         run: npm test
         working-directory: site
+      # Optional: a fork can keep its club settings in a repository variable (Settings → Secrets and
+      # variables → Actions → Variables → SITE_CONFIG, the whole config.json) instead of editing the file.
+      - name: Use the SITE_CONFIG variable as config.json
+        if: vars.SITE_CONFIG != ''
+        env:
+          SITE_CONFIG: ${{ vars.SITE_CONFIG }}
+        run: |
+          printf '%s' "$SITE_CONFIG" > site/config.json
+          node -e "JSON.parse(require('fs').readFileSync('site/config.json', 'utf8'))"
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
