@@ -12,15 +12,20 @@ const row = (label, value) =>
 function front({ name, number, issueDate }) {
   const len = visualLength(name);
   const club = cardClubLines().map(escapeHtml).join("<br>");
+  const seal = `<div class="seal">${escapeHtml(t("card.seal"))}</div>`;
+  // CJK cards: a vertical seal in the top-right corner. Latin cards: a horizontal one at the end of
+  // the short number row, so it never runs into the club name, however long it is.
+  const latin = t("_cardStyle") === "latin";
+  const numberValue = number == null ? `<span class="pending">${escapeHtml(t("card.pending"))}</span>` : fmtNumber(number);
   return `<div class="half face front">
-      <div class="seal">${escapeHtml(t("card.seal"))}</div>
+      ${latin ? "" : seal}
       <div class="head">
         ${config.logo ? `<img class="card-logo" src="${escapeHtml(config.logo)}" alt="">` : ""}
         <div class="club">${club}</div>
       </div>
       <div class="brush"></div>
       ${row(t("card.name"), `<span class="name" data-len="${len}" style="--len: ${len}">${escapeHtml(name)}</span>`)}
-      ${row(t("card.number"), number == null ? `<span class="pending">${escapeHtml(t("card.pending"))}</span>` : fmtNumber(number))}
+      ${row(t("card.number"), numberValue + (latin ? seal : ""))}
       ${row(t("card.issued"), fmtDate(issueDate))}
     </div>`;
 }

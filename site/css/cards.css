@@ -199,7 +199,11 @@
 /* ---------- Latin-script labels (locale "_cardStyle": "latin") ----------
    The default layout above is set for CJK: a vertical seal, labels justified to one width. */
 
+/* In the number row (see cards.js), pushed to the right edge. */
 [data-card-style="latin"] .seal {
+  position: static;
+  align-self: center;
+  margin-left: auto;
   width: auto;
   padding: 1mm 1.8mm;
   writing-mode: horizontal-tb;
