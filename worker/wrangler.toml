@@ -7,3 +7,7 @@ binding = "DB"
 database_name = "membership"
 database_id = "10233640-7aba-4121-8845-fb4cb7607f27"
 migrations_dir = "migrations"
+
+[vars]
+# Where the page is served from (scheme + host, no path), comma-separated for more than one.
+ALLOWED_ORIGINS = "https://furic.github.io"

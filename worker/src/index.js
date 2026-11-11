@@ -1,7 +1,9 @@
-// Members API for the 會員證 generator. Holds the shared member register in D1 and
-// hands out 會員編號 — every batch takes its numbers inside one D1 transaction.
+// Members API for the membership card page. Holds the shared member register in D1 and
+// hands out member numbers — every batch takes its numbers inside one D1 transaction.
 
-const ALLOWED_ORIGINS = [/^https:\/\/furic\.github\.io$/, /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/];
+// The page's origin(s) come from ALLOWED_ORIGINS in wrangler.toml [vars], comma-separated.
+// Local copies (localhost / 127.0.0.1) are always allowed.
+const LOCAL_ORIGIN = /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/;
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 const MAX_BATCH = 100;
 const MAX_NAME = 30;
@@ -29,9 +31,15 @@ const toMember = (row) => ({
   lifetime: Boolean(row.lifetime),
 });
 
-function corsHeaders(request) {
+const allowedOrigins = (env) =>
+  (env.ALLOWED_ORIGINS ?? "")
+    .split(",")
+    .map((s) => s.trim().replace(/\/+$/, ""))
+    .filter(Boolean);
+
+function corsHeaders(request, env) {
   const origin = request.headers.get("Origin");
-  if (!origin || !ALLOWED_ORIGINS.some((re) => re.test(origin))) return {};
+  if (!origin || !(LOCAL_ORIGIN.test(origin) || allowedOrigins(env).includes(origin))) return {};
   return {
     "Access-Control-Allow-Origin": origin,
     "Access-Control-Allow-Methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS",
@@ -56,7 +64,7 @@ async function hashPasscode(salt, code) {
   return hex(await crypto.subtle.digest("SHA-256", enc.encode(`${salt}:${code}`)));
 }
 
-// The passcode set from the 設定 page (stored as "salt:sha256") replaces the PASSCODE secret.
+// The passcode set from the settings page (stored as "salt:sha256") replaces the PASSCODE secret.
 // Deleting the `passcode` setting row falls back to the secret again.
 async function passcodeMatches(env, code) {
   const row = await env.DB.prepare("SELECT value FROM settings WHERE key = 'passcode'").first();
@@ -94,7 +102,7 @@ async function issueMembers(env, body) {
   if (!lifetime && !ISO_DATE.test(expiryDate ?? "")) throw new HttpError(400, "invalid date");
   const clean = names.map(cleanName);
 
-  // 永久會員 have no expiry date.
+  // Lifetime members have no expiry date.
   const insert = env.DB.prepare(
     `INSERT INTO members (number, name, issue_date, expiry_date, lifetime)
      VALUES (${NEXT_NUMBER_SQL}, ?, ?, ?, ?)
@@ -172,7 +180,7 @@ async function updateMember(env, number, body) {
     sets.push("number = ?");
     params.push(newNumber);
   }
-  // 有效日期: `lifetime: true` clears the date; otherwise a valid first expiry date is required.
+  // Expiry: `lifetime: true` clears the date; otherwise a valid first expiry date is required.
   if (body?.lifetime !== undefined || body?.expiryDate !== undefined) {
     if (body.lifetime !== undefined && typeof body.lifetime !== "boolean") throw new HttpError(400, "invalid lifetime");
     if (body.lifetime === true) {
@@ -239,7 +247,7 @@ async function route(request, env) {
 
 export default {
   async fetch(request, env) {
-    const cors = corsHeaders(request);
+    const cors = corsHeaders(request, env);
     if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: cors });
 
     let status, body;
