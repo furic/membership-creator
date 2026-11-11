@@ -12,6 +12,8 @@ English · [繁體中文](README.zh-Hant.md)
 
 A small web app for clubs: keep a shared member register, give out member numbers that never collide, and print fold-over membership cards on plain A4 (5 cards per sheet, front and back side by side, cut and fold).
 
+![New members: type names, check the card preview, confirm and print](docs/screenshots/new-members-en.png)
+
 - `site/`: the page. Plain HTML/CSS/JS, no build step, hosted on GitHub Pages.
 - `worker/`: a Cloudflare Worker with a D1 database that holds the register and assigns numbers.
 - Everything club-specific (name, logo, phone, colours, language, date format) lives in `site/config.json` and `site/assets/`.
@@ -86,7 +88,7 @@ Fonts are loaded in `site/index.html` (LXGW WenKai TC for cards, Noto Sans TC fo
 
 ### Add a language
 
-Copy `site/locales/en.json` to `site/locales/<code>.json` (e.g. `fr.json`), translate the values, and set `"locale": "<code>"`. Keys you leave out show the English text. Keep `{{placeholders}}` as they are. A key ending in `_one` is the singular form, used when the count is 1. `_cardStyle` picks the card layout: `"cjk"` gives the vertical seal and labels justified to one width, `"latin"` gives a horizontal seal and names that shrink to fit.
+Copy `site/locales/en.json` to `site/locales/<code>.json` (e.g. `fr.json`), translate the values, and set `"locale": "<code>"`. Keys you leave out show the English text. Keep `{{placeholders}}` as they are. A key ending in `_one` is the singular form, used when the count is 1. `_cardStyle` picks the card layout: `"cjk"` gives the vertical seal and labels justified to one width, `"latin"` gives a horizontal seal beside the member number and names that shrink to fit.
 
 ## Technical notes
 

@@ -12,6 +12,8 @@
 
 一個給協會、社團使用的小型網頁：共用一份會員名單，自動派發不會重複的會員編號，並以普通 A4 紙列印對摺式會員證（每張 A4 印 5 張，正面與背面並排，剪下後對摺）。
 
+![新增會員：輸入姓名、檢查會員證預覽、確認編號後列印](docs/screenshots/new-members-zh.png)
+
 - `site/`：網頁本身。純 HTML/CSS/JS，毋須建置，放在 GitHub Pages。
 - `worker/`：Cloudflare Worker 及 D1 資料庫，保存會員名單並派發編號。
 - 所有屬於個別協會的資料（名稱、標誌、電話、顏色、語言、日期格式）都放在 `site/config.json` 及 `site/assets/`。
@@ -86,7 +88,7 @@ push 之前可先在本機試用，見[本機執行](#本機執行)。在網址�
 
 ### 新增語言
 
-把 `site/locales/en.json` 複製為 `site/locales/<代碼>.json`（例如 `fr.json`），翻譯各項文字，再設定 `"locale": "<代碼>"`。未翻譯的項目會顯示英文。`{{placeholders}}` 須保持原樣。以 `_one` 結尾的項目是單數形式，數量為 1 時使用。`_cardStyle` 決定會員證版面：`"cjk"` 為直排印章、標籤等寬對齊；`"latin"` 為橫排印章、姓名過長時自動縮小。
+把 `site/locales/en.json` 複製為 `site/locales/<代碼>.json`（例如 `fr.json`），翻譯各項文字，再設定 `"locale": "<代碼>"`。未翻譯的項目會顯示英文。`{{placeholders}}` 須保持原樣。以 `_one` 結尾的項目是單數形式，數量為 1 時使用。`_cardStyle` 決定會員證版面：`"cjk"` 為直排印章、標籤等寬對齊；`"latin"` 為橫排印章（置於會員編號旁）、姓名過長時自動縮小。
 
 ## 技術說明
 
