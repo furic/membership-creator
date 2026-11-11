@@ -1,6 +1,6 @@
 # 會員管理 — 澳門中國民族服飾愛好者協會
 
-網址：https://furic.github.io/membership-creator/
+網址：https://furic.github.io/membership-manager/
 
 ## 使用方法
 
