@@ -35,6 +35,13 @@ test("lifetime cards show 永久會員 on the back instead of expiry dates", () 
   assert.ok(html.includes("04/11/2026"));
 });
 
+test("the back shows the club phone number, for yearly and lifetime members", () => {
+  for (const c of [card(), card({ lifetime: true, expiryDate: null })]) {
+    const html = renderSheets([c]);
+    assert.ok(html.includes("電話：6638 2986"));
+  }
+});
+
 test("names are HTML-escaped", () => {
   const html = renderSheets([card({ name: "<b>陳</b>" })]);
   assert.ok(html.includes("&lt;b&gt;陳&lt;/b&gt;"));

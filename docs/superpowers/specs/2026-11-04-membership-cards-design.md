@@ -77,6 +77,7 @@ Dates:
 - No signature lines anywhere.
 - Back: one 有效日期 only (the stored `expiry_date`), very large, over a faint club stamp; lifetime members get 「永久會員」 instead. The 2nd/3rd yearly dates are gone.
 - Font: LXGW WenKai TC (楷書) from Google Fonts, falling back to the system 楷體.
+- (2026-11-11) Every back also prints the club phone 「電話：6638 2986」 along the bottom, for yearly and lifetime members (`CLUB_PHONE` in `site/js/cards.js`).
 
 Number: zero-padded to 3 digits (`001`). Past 999 it simply grows (`1000`). (My call.)
 

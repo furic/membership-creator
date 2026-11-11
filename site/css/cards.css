@@ -141,6 +141,7 @@
   align-items: center;
   justify-content: center;
   text-align: center;
+  padding-bottom: 7mm; /* centre the date in the space above the phone line */
 }
 
 .watermark {
@@ -177,6 +178,18 @@
   font-size: 11mm;
   letter-spacing: 3mm;
   margin-right: -3mm;
+}
+
+/* Club phone along the bottom of the back. */
+.phone {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 3.6mm;
+  text-align: center;
+  font-size: 4.8mm;
+  font-weight: 700;
+  letter-spacing: 0.3mm;
 }
 
 @media screen {

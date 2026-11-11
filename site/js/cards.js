@@ -3,6 +3,7 @@
 import { addYears, chunk, formatDMY, formatNumber } from "./lib.js";
 
 export const STRIPS_PER_SHEET = 5;
+export const CLUB_PHONE = "6638 2986"; // printed on the back of every card
 
 const escapeHtml = (s) =>
   String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
@@ -24,12 +25,12 @@ function front({ name, number, issueDate }) {
     </div>`;
 }
 
-// The back carries one thing: the 有效日期, or 永久會員, over a faint club stamp.
+// The back: the 有效日期 (or 永久會員) over a faint club stamp, and the club phone at the bottom.
 function back({ issueDate, expiryDate, lifetime }) {
   const content = lifetime
     ? '<div class="lifetime-text">永久會員</div>'
     : `<div class="expiry-label">有效日期</div><div class="expiry-date">${formatDMY(expiryDate || addYears(issueDate, 1))}</div>`;
-  return `<div class="half face back"><img class="watermark" src="assets/stamp.png" alt="">${content}</div>`;
+  return `<div class="half face back"><img class="watermark" src="assets/stamp.png" alt="">${content}<div class="phone">電話：${CLUB_PHONE}</div></div>`;
 }
 
 export function renderSheets(cards) {
