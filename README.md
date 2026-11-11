@@ -1,29 +1,27 @@
-# Membership Manager · 會員管理
+# Membership Manager
+
+English · [繁體中文](README.zh-Hant.md)
 
 A small web app for clubs: keep a shared member register, give out member numbers that never collide, and print fold-over membership cards on plain A4 (5 cards per sheet, front and back side by side, cut and fold).
 
 - `site/`: the page. Plain HTML/CSS/JS, no build step, hosted on GitHub Pages.
 - `worker/`: a Cloudflare Worker with a D1 database that holds the register and assigns numbers.
 - Everything club-specific (name, logo, phone, colours, language, date format) lives in `site/config.json` and `site/assets/`.
-- The interface and cards come in Traditional Chinese (`zh-Hant`) and English (`en`); more languages are one JSON file each.
+- The interface and cards come in English (`en`) and Traditional Chinese (`zh-Hant`); more languages are one JSON file each.
 
 Both services fit in their free tiers for a club-sized register.
 
-This repository runs the cards for 澳門中國民族服飾愛好者協會: https://furic.github.io/membership-manager/
+In use at 澳門中國民族服飾愛好者協會 (Macau): https://furic.github.io/membership-manager/
 
----
+## Using it
 
-## 使用方法（澳門中國民族服飾愛好者協會）
-
-1. 打開網址，輸入協會共用密碼（同一部電腦只需輸入一次）。
-2. **新增會員**：每行輸入一位會員姓名。「有效日期」可留空，留空即為今日起計一年後；有效日期以大字印在卡背。
-3. 檢查預覽無誤後，按 **確認並編號**。系統會按次序派發會員編號（001、002……），並存入會員名單。預覽會顯示預計編號，按下後才正式確定。如需由指定編號開始（例如 100），可到 **設定** 更改「下一個會員編號」（必須大於現有最大編號）。
-4. 按 **列印**。列印設定請選 **A4**、**實際大小（100%）**，並**關閉頁首及頁尾**。每張 A4 可印 5 張會員證。
-5. 沿實線剪下，沿中間虛線對摺：左邊是正面，右邊是背面。
-6. **會員名單**：可搜尋姓名或編號；按 **編輯** 可修改會員編號（如編號已被使用會提示）、姓名、有效日期或改為永久會員；亦可永久刪除會員，亦可勾選會員後按 **重印所選**。
-7. **設定**：更改下一個會員編號；更改協會共用密碼（需輸入現時密碼，新密碼最少 6 個字元，只可使用英文字母、數字及符號）。更改密碼後，其他電腦須輸入新密碼。
-
----
+1. Open the page and enter the shared passcode. Each computer only asks once.
+2. **New members**: type one name per line. Leave **Valid until** empty for one year from today (`validityYears` in the config), or tick **Lifetime member**. The expiry date is printed large on the back of the card.
+3. Check the preview, then press **Confirm and number**. Numbers are given out in order (001, 002, …) and the members are saved to the register. The preview shows the expected numbers; they are final only once confirmed, in case someone else adds members at the same time. To start from a given number (say 100), change **Next member number** in **Settings**. It must be higher than the highest existing number.
+4. Press **Print**. Choose **A4**, **actual size (100%)**, and turn **headers and footers off**. Each A4 sheet holds 5 cards.
+5. Cut along the solid lines and fold along the dashed middle line: the front is on the left, the back on the right.
+6. **Members**: search by name or number. **Edit** changes a member's number (it warns when the number is taken), name, expiry date or lifetime status. **Delete** removes a member for good. Tick members and press **Reprint selected** to print their cards again.
+7. **Settings**: change the next member number, or the shared passcode (enter the current one; the new one needs at least 6 characters, English letters, digits and symbols only). After a passcode change, other computers must enter the new one.
 
 ## Set it up for your own club
 
@@ -81,8 +79,6 @@ Fonts are loaded in `site/index.html` (LXGW WenKai TC for cards, Noto Sans TC fo
 ### Add a language
 
 Copy `site/locales/en.json` to `site/locales/<code>.json` (e.g. `fr.json`), translate the values, and set `"locale": "<code>"`. Keys you leave out show the English text. Keep `{{placeholders}}` as they are. A key ending in `_one` is the singular form, used when the count is 1. `_cardStyle` picks the card layout: `"cjk"` gives the vertical seal and labels justified to one width, `"latin"` gives a horizontal seal and names that shrink to fit.
-
----
 
 ## Technical notes
 
