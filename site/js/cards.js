@@ -1,36 +1,38 @@
 // Renders fold-over cards: each strip is front | back, 5 strips per A4 sheet.
-// Styling lives in css/cards.css.
-import { addYears, chunk, formatDMY, formatNumber } from "./lib.js";
+// Styling lives in css/cards.css; the club details come from config.json, the labels from locales/.
+import { cardClubLines, config, defaultExpiry, fmtDate, fmtNumber } from "./config.js";
+import { t } from "./i18n.js";
+import { chunk, escapeHtml, visualLength } from "./lib.js";
 
 export const STRIPS_PER_SHEET = 5;
-export const CLUB_PHONE = "6638 2986"; // printed on the back of every card
 
-const escapeHtml = (s) =>
-  String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
-
-const row = (label, value) => `<div class="row"><span class="lbl">${label}</span><span class="colon">：</span>${value}</div>`;
+const row = (label, value) =>
+  `<div class="row"><span class="lbl">${escapeHtml(label)}</span><span class="colon">${escapeHtml(t("card.colon"))}</span>${value}</div>`;
 
 function front({ name, number, issueDate }) {
-  const len = [...name].length;
+  const len = visualLength(name);
+  const club = cardClubLines().map(escapeHtml).join("<br>");
   return `<div class="half face front">
-      <div class="seal">會員證</div>
+      <div class="seal">${escapeHtml(t("card.seal"))}</div>
       <div class="head">
-        <img class="card-logo" src="assets/logo.png" alt="">
-        <div class="club">澳門中國民族服飾<br>愛好者協會</div>
+        ${config.logo ? `<img class="card-logo" src="${escapeHtml(config.logo)}" alt="">` : ""}
+        <div class="club">${club}</div>
       </div>
       <div class="brush"></div>
-      ${row("姓名", `<span class="name" data-len="${len}">${escapeHtml(name)}</span>`)}
-      ${row("會員編號", number == null ? '<span class="pending">待定</span>' : formatNumber(number))}
-      ${row("簽發日期", formatDMY(issueDate))}
+      ${row(t("card.name"), `<span class="name" data-len="${len}" style="--len: ${len}">${escapeHtml(name)}</span>`)}
+      ${row(t("card.number"), number == null ? `<span class="pending">${escapeHtml(t("card.pending"))}</span>` : fmtNumber(number))}
+      ${row(t("card.issued"), fmtDate(issueDate))}
     </div>`;
 }
 
-// The back: the 有效日期 (or 永久會員) over a faint club stamp, and the club phone at the bottom.
+// The back: the expiry date (or "lifetime member") over a faint club stamp, and the club phone at the bottom.
 function back({ issueDate, expiryDate, lifetime }) {
   const content = lifetime
-    ? '<div class="lifetime-text">永久會員</div>'
-    : `<div class="expiry-label">有效日期</div><div class="expiry-date">${formatDMY(expiryDate || addYears(issueDate, 1))}</div>`;
-  return `<div class="half face back"><img class="watermark" src="assets/stamp.png" alt="">${content}<div class="phone">電話：${CLUB_PHONE}</div></div>`;
+    ? `<div class="lifetime-text">${escapeHtml(t("card.lifetime"))}</div>`
+    : `<div class="expiry-label">${escapeHtml(t("card.expiry"))}</div><div class="expiry-date">${fmtDate(expiryDate || defaultExpiry(issueDate))}</div>`;
+  const stamp = config.stamp ? `<img class="watermark" src="${escapeHtml(config.stamp)}" alt="">` : "";
+  const phone = config.phone ? `<div class="phone">${escapeHtml(t("card.phone", { phone: config.phone }))}</div>` : "";
+  return `<div class="half face back">${stamp}${content}${phone}</div>`;
 }
 
 export function renderSheets(cards) {

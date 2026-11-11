@@ -1,6 +1,10 @@
 /* Fold-over membership cards, design "D 印章楷書", large print for older members.
    Real sizes in mm: half = 85.6 × 54, strip = 171.2 × 54, sheet = A4. */
 
+:root {
+  --card-color: #a3302f; /* config.json "cardColor" */
+}
+
 @page {
   size: A4 portrait;
   margin: 0;
@@ -64,7 +68,7 @@
 }
 
 .club {
-  color: #a3302f; /* muted brick red: reads as seal red without shouting */
+  color: var(--card-color); /* muted brick red: reads as seal red without shouting */
   font-size: 5.3mm;
   font-weight: 700;
   line-height: 1.25;
@@ -78,8 +82,8 @@
   width: 11mm;
   padding: 1.4mm 0;
   border-radius: 1mm;
-  background: #a3302f;
-  box-shadow: inset 0 0 0 0.5mm #a3302f, inset 0 0 0 0.8mm #fff;
+  background: var(--card-color);
+  box-shadow: inset 0 0 0 0.5mm var(--card-color), inset 0 0 0 0.8mm #fff;
   color: #fff;
   writing-mode: vertical-rl;
   display: flex;
@@ -99,7 +103,7 @@
   height: 1.6mm;
   margin-top: 1.4mm;
   border-radius: 50%;
-  background: linear-gradient(90deg, transparent, #a3302f 12%, #a3302f 70%, transparent);
+  background: linear-gradient(90deg, transparent, var(--card-color) 12%, var(--card-color) 70%, transparent);
   opacity: 0.85;
   print-color-adjust: exact;
   -webkit-print-color-adjust: exact;
@@ -161,7 +165,7 @@
 }
 
 .expiry-label {
-  color: #a3302f;
+  color: var(--card-color);
   font-size: 5.4mm;
   letter-spacing: 2mm;
   margin-right: -2mm; /* balance the trailing letter-spacing */
@@ -174,7 +178,7 @@
 }
 
 .lifetime-text {
-  color: #a3302f;
+  color: var(--card-color);
   font-size: 11mm;
   letter-spacing: 3mm;
   margin-right: -3mm;
@@ -190,6 +194,45 @@
   font-size: 4.8mm;
   font-weight: 700;
   letter-spacing: 0.3mm;
+}
+
+/* ---------- Latin-script labels (locale "_cardStyle": "latin") ----------
+   The default layout above is set for CJK: a vertical seal, labels justified to one width. */
+
+[data-card-style="latin"] .seal {
+  width: auto;
+  padding: 1mm 1.8mm;
+  writing-mode: horizontal-tb;
+  font-size: 3.6mm;
+  letter-spacing: 0.4mm;
+}
+
+/* Labels carry their own colon ("Name:"); the empty .colon is the gap before the value. */
+[data-card-style="latin"] .lbl {
+  width: 4.4em;
+  text-align-last: auto;
+}
+
+[data-card-style="latin"] .colon {
+  width: 0.6em;
+}
+
+/* The small seal leaves the whole row free: ~46mm. Latin letters are about half an em,
+   and --len counts two of them as one, so the name shrinks only once it would not fit. */
+[data-card-style="latin"] .name[data-len] {
+  font-size: min(1em, calc(46mm / var(--len)));
+}
+
+[data-card-style="latin"] .expiry-label {
+  letter-spacing: 0.6mm;
+  margin-right: 0;
+  text-transform: uppercase;
+}
+
+[data-card-style="latin"] .lifetime-text {
+  font-size: 7.5mm;
+  letter-spacing: 0.4mm;
+  margin-right: 0;
 }
 
 @media screen {

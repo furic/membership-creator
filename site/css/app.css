@@ -1,10 +1,10 @@
 :root {
-  --ink: #543c7d;
-  --ink-soft: #efeaf7;
+  --ink: #543c7d; /* config.json "appColor" */
+  --ink-soft: color-mix(in srgb, var(--ink) 10%, #fff);
   --text: #1d1b22;
   --muted: #6b6676;
-  --line: #ddd8e6;
-  --bg: #f6f4f9;
+  --line: color-mix(in srgb, var(--ink) 20%, #fff);
+  --bg: color-mix(in srgb, var(--ink) 6%, #fff);
   --panel: #fff;
   --error: #b3261e;
   --ok: #1e6b3a;

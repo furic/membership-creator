@@ -1,5 +1,6 @@
 // Talks to the members API (worker/). The shared passcode is kept in this browser.
-import { API_BASE } from "./config.js";
+import { config } from "./config.js";
+import { t } from "./i18n.js";
 
 const STORAGE_KEY = "membership.passcode";
 let memoryPasscode = "";
@@ -31,18 +32,18 @@ export const passcode = {
 async function request(path, { method = "GET", body, code = passcode.get() } = {}) {
   let res;
   try {
-    res = await fetch(API_BASE + path, {
+    res = await fetch(config.apiBase + path, {
       method,
       headers: { Authorization: `Bearer ${code}`, ...(body ? { "Content-Type": "application/json" } : {}) },
       body: body ? JSON.stringify(body) : undefined,
     });
   } catch {
-    throw new Error("無法連線，請檢查網絡後再試。");
+    throw new Error(t("error.offline"));
   }
-  if (res.status === 401) throw new AuthError("密碼錯誤");
+  if (res.status === 401) throw new AuthError(t("error.wrongPasscode"));
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
-    const err = new Error(`操作失敗（${data.error || res.status}）`);
+    const err = new Error(t("error.failed", { reason: data.error || res.status }));
     err.status = res.status;
     err.data = data;
     throw err;

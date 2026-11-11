@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="zh-Hant-MO">
+<html>
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>會員管理</title>
+  <title>Membership</title>
   <link rel="icon" href="assets/favicon.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -11,15 +11,16 @@
   <link rel="stylesheet" href="css/cards.css">
   <link rel="stylesheet" href="css/app.css">
 </head>
+<!-- Text comes from locales/<locale>.json through the data-i18n* attributes; club details from config.json. -->
 <body>
   <div class="app no-print">
     <header class="top">
-      <img class="logo" src="assets/logo.png" alt="">
-      <div class="brand">澳門中國民族服飾愛好者協會<small>會員管理</small></div>
+      <img id="club-logo" class="logo" alt="" hidden>
+      <div class="brand"><span id="club-name"></span><small data-i18n="app.title"></small></div>
       <nav class="tabs" hidden>
-        <button type="button" data-view="issue" class="tab">新增會員</button>
-        <button type="button" data-view="register" class="tab">會員名單</button>
-        <button type="button" data-view="settings" class="tab">設定</button>
+        <button type="button" data-view="issue" class="tab" data-i18n="tab.issue"></button>
+        <button type="button" data-view="register" class="tab" data-i18n="tab.register"></button>
+        <button type="button" data-view="settings" class="tab" data-i18n="tab.settings"></button>
       </nav>
     </header>
 
@@ -27,84 +28,84 @@
 
     <section id="view-login" class="view" hidden>
       <form id="login-form" class="panel narrow">
-        <h1>輸入密碼</h1>
-        <label>協會共用密碼
+        <h1 data-i18n="login.title"></h1>
+        <label><span data-i18n="login.label"></span>
           <input id="login-code" type="password" autocomplete="current-password" required>
         </label>
         <p id="login-error" class="error" hidden></p>
-        <button type="submit" class="primary">登入</button>
+        <button type="submit" class="primary" data-i18n="login.submit"></button>
       </form>
     </section>
 
     <section id="view-issue" class="view" hidden>
       <div class="panel">
-        <h1>新增會員</h1>
+        <h1 data-i18n="issue.title"></h1>
         <div class="form-grid">
-          <label>會員姓名（每行一位）
-            <textarea id="names" rows="8" placeholder="陳大文&#10;李小梅"></textarea>
+          <label><span data-i18n="issue.names"></span>
+            <textarea id="names" rows="8" data-i18n-placeholder="issue.namesPlaceholder"></textarea>
           </label>
           <div>
-            <label>有效日期
+            <label><span data-i18n="issue.expiry"></span>
               <input id="expiry" type="date">
             </label>
-            <label class="check lifetime-check"><input id="lifetime" type="checkbox"> 永久會員（不設有效日期）</label>
+            <label class="check lifetime-check"><input id="lifetime" type="checkbox"> <span data-i18n="member.lifetimeOption"></span></label>
             <p class="hint" id="expiry-hint"></p>
             <p class="hint" id="count-hint"></p>
-            <p class="hint">下一個會員編號：<strong id="next-number">—</strong>（可於「設定」更改）</p>
+            <p class="hint"><span data-i18n="issue.nextNumber"></span><strong id="next-number">—</strong><span data-i18n="issue.nextNumberNote"></span></p>
             <div class="actions">
-              <button type="button" id="issue-btn" class="primary" disabled>確認並編號</button>
-              <button type="button" id="print-btn" class="primary" hidden>列印</button>
-              <button type="button" id="new-batch-btn" hidden>新一批</button>
+              <button type="button" id="issue-btn" class="primary" disabled data-i18n="issue.confirm"></button>
+              <button type="button" id="print-btn" class="primary" hidden data-i18n="issue.print"></button>
+              <button type="button" id="new-batch-btn" hidden data-i18n="issue.newBatch"></button>
             </div>
             <p class="hint" id="issued-msg"></p>
-            <p class="hint print-tip">列印時請選 A4、實際大小（100%），並關閉頁首及頁尾。剪下後沿虛線對摺。</p>
+            <p class="hint print-tip" data-i18n="issue.printTip"></p>
           </div>
         </div>
       </div>
-      <h2 class="preview-title">預覽</h2>
+      <h2 class="preview-title" data-i18n="issue.preview"></h2>
       <div id="issue-preview" class="preview"></div>
     </section>
 
     <section id="view-register" class="view" hidden>
       <div class="panel">
-        <h1>會員名單</h1>
+        <h1 data-i18n="register.title"></h1>
         <div class="toolbar">
-          <input id="search" type="search" placeholder="搜尋姓名或會員編號">
-          <button type="button" id="reprint-btn" class="primary" disabled>重印所選</button>
+          <input id="search" type="search" data-i18n-placeholder="register.search">
+          <button type="button" id="reprint-btn" class="primary" disabled data-i18n="register.reprint"></button>
         </div>
-        <p class="hint print-tip">列印時請選 A4、實際大小（100%），並關閉頁首及頁尾。</p>
+        <p class="hint print-tip" data-i18n="register.printTip"></p>
         <div class="table-wrap">
           <table>
             <thead>
               <tr>
-                <th><input id="select-all" type="checkbox" aria-label="全選"></th>
-                <th>會員編號</th><th>姓名</th><th>簽發日期</th><th>有效日期</th><th>操作</th>
+                <th><input id="select-all" type="checkbox" data-i18n-label="register.selectAll"></th>
+                <th data-i18n="register.colNumber"></th><th data-i18n="register.colName"></th><th data-i18n="register.colIssued"></th><th data-i18n="register.colExpiry"></th><th data-i18n="register.colActions"></th>
               </tr>
             </thead>
             <tbody id="members"></tbody>
           </table>
-          <p id="empty" class="hint" hidden>沒有會員記錄。</p>
+          <p id="empty" class="hint" hidden data-i18n="register.empty"></p>
         </div>
       </div>
 
       <dialog id="edit-dialog" class="edit-dialog">
         <form id="edit-form" method="dialog">
-          <h1>編輯會員</h1>
-          <label>會員編號
+          <h1 data-i18n="edit.title"></h1>
+          <label><span data-i18n="edit.number"></span>
             <input id="edit-number" type="text" inputmode="numeric" pattern="\d{1,5}" maxlength="5" required>
           </label>
-          <label>姓名
+          <label><span data-i18n="edit.name"></span>
             <input id="edit-name" type="text" maxlength="30" required>
           </label>
-          <label>有效日期
+          <label><span data-i18n="edit.expiry"></span>
             <input id="edit-expiry" type="date">
           </label>
-          <label class="check"><input id="edit-lifetime" type="checkbox"> 永久會員（不設有效日期）</label>
+          <label class="check"><input id="edit-lifetime" type="checkbox"> <span data-i18n="member.lifetimeOption"></span></label>
           <p class="hint" id="edit-hint"></p>
           <p id="edit-error" class="error" hidden></p>
           <div class="actions">
-            <button type="submit" class="primary" value="save">儲存</button>
-            <button type="button" id="edit-cancel">取消</button>
+            <button type="submit" class="primary" value="save" data-i18n="edit.save"></button>
+            <button type="button" id="edit-cancel" data-i18n="edit.cancel"></button>
           </div>
         </form>
       </dialog>
@@ -113,31 +114,31 @@
     <section id="view-settings" class="view" hidden>
       <div class="settings">
         <form id="next-form" class="panel">
-          <h1>下一個會員編號</h1>
-          <p class="hint">下一位新會員會由此編號開始，之後順序遞增。必須大於現有最大的會員編號。</p>
-          <label>下一個會員編號
+          <h1 data-i18n="settings.nextTitle"></h1>
+          <p class="hint" data-i18n="settings.nextHint"></p>
+          <label><span data-i18n="settings.nextLabel"></span>
             <input id="next-input" type="text" inputmode="numeric" pattern="\d{1,5}" maxlength="5" required>
           </label>
           <p id="next-error" class="error" hidden></p>
-          <div class="actions"><button type="submit" class="primary">儲存</button></div>
+          <div class="actions"><button type="submit" class="primary" data-i18n="settings.save"></button></div>
         </form>
 
         <form id="passcode-form" class="panel">
-          <h1>更改密碼</h1>
-          <p class="hint">此為協會共用密碼。更改後，其他電腦須輸入新密碼才能繼續使用。</p>
-          <input type="text" autocomplete="username" value="協會" hidden>
-          <label>現時密碼
+          <h1 data-i18n="settings.pcTitle"></h1>
+          <p class="hint" data-i18n="settings.pcHint"></p>
+          <input id="pc-username" type="text" autocomplete="username" hidden>
+          <label><span data-i18n="settings.pcCurrent"></span>
             <input id="pc-current" type="password" autocomplete="current-password" required>
           </label>
-          <label>新密碼
+          <label><span data-i18n="settings.pcNext"></span>
             <input id="pc-next" type="password" autocomplete="new-password" minlength="6" maxlength="64" required>
           </label>
-          <label>再次輸入新密碼
+          <label><span data-i18n="settings.pcConfirm"></span>
             <input id="pc-confirm" type="password" autocomplete="new-password" minlength="6" maxlength="64" required>
           </label>
-          <p class="hint">最少 6 個字元，只可使用英文字母、數字及符號。</p>
+          <p class="hint" data-i18n="settings.pcRule"></p>
           <p id="pc-error" class="error" hidden></p>
-          <div class="actions"><button type="submit" class="primary">更改密碼</button></div>
+          <div class="actions"><button type="submit" class="primary" data-i18n="settings.pcSubmit"></button></div>
         </form>
       </div>
     </section>

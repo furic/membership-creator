@@ -1,12 +1,39 @@
-// Screens: 輸入密碼 → 新增會員 / 會員名單 / 設定. Cards are printed from #print-root.
+// Screens: login → new members / member list / settings. Cards are printed from #print-root.
 import * as api from "./api.js";
-import { renderSheets } from "./cards.js";
-import { addYears, formatDMY, formatNumber, parseNames, todayISO } from "./lib.js";
+import { renderSheets, STRIPS_PER_SHEET } from "./cards.js";
+import { config, defaultExpiry, fmtDate, fmtNumber, loadConfig } from "./config.js";
+import { loadMessages, t, translatePage } from "./i18n.js";
+import { escapeHtml, parseNames, todayISO } from "./lib.js";
 
 const $ = (id) => document.getElementById(id);
+
+// ---------- start-up: config.json, then the language file, then the page ----------
+
+try {
+  await loadConfig();
+  const locale = await loadMessages(config.locale);
+  document.documentElement.lang = config.locale.startsWith(locale) ? config.locale : locale;
+  document.documentElement.dataset.cardStyle = t("_cardStyle") === "latin" ? "latin" : "cjk";
+  translatePage();
+} catch (err) {
+  document.body.textContent = `Could not start: ${err.message}`;
+  throw err;
+}
+
+document.title = t("app.title");
+$("club-name").textContent = config.clubName;
+$("pc-username").value = config.clubName || "membership";
+if (config.logo) Object.assign($("club-logo"), { src: config.logo, hidden: false });
+if (config.favicon) document.querySelector('link[rel="icon"]').href = config.favicon;
+const rootStyle = document.documentElement.style;
+if (config.cardColor) rootStyle.setProperty("--card-color", config.cardColor);
+if (config.appColor) rootStyle.setProperty("--ink", config.appColor);
+
 const views = ["login", "issue", "register", "settings"];
 
 // ---------- shared ----------
+
+const numberRange = (first, last) => (first === last ? fmtNumber(first) : `${fmtNumber(first)}–${fmtNumber(last)}`);
 
 let statusTimer;
 function showStatus(message, kind = "info") {
@@ -22,7 +49,7 @@ function handleError(err) {
   if (err instanceof api.AuthError) {
     api.passcode.clear();
     show("login");
-    $("login-error").textContent = "密碼已失效，請重新輸入。";
+    $("login-error").textContent = t("login.expired");
     $("login-error").hidden = false;
     return;
   }
@@ -47,10 +74,7 @@ async function printCards(cards) {
   window.print();
 }
 
-const escapeHtml = (s) =>
-  String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
-
-// ---------- 輸入密碼 ----------
+// ---------- login ----------
 
 $("login-form").addEventListener("submit", async (e) => {
   e.preventDefault();
@@ -64,7 +88,7 @@ $("login-form").addEventListener("submit", async (e) => {
     $("login-code").value = "";
     show("issue");
   } catch (err) {
-    $("login-error").textContent = err instanceof api.AuthError ? "密碼錯誤" : err.message;
+    $("login-error").textContent = err instanceof api.AuthError ? t("error.wrongPasscode") : err.message;
     $("login-error").hidden = false;
   } finally {
     btn.disabled = false;
@@ -73,7 +97,7 @@ $("login-form").addEventListener("submit", async (e) => {
 
 for (const tab of document.querySelectorAll(".tab[data-view]")) tab.addEventListener("click", () => show(tab.dataset.view));
 
-// ---------- 新增會員 ----------
+// ---------- new members ----------
 
 let issued = null; // members returned by the API for the current batch
 let issuing = false;
@@ -82,7 +106,7 @@ let nextNumber = null; // expected number of the first name, for the preview
 async function refreshNextNumber() {
   try {
     nextNumber = await api.nextNumber();
-    $("next-number").textContent = formatNumber(nextNumber);
+    $("next-number").textContent = fmtNumber(nextNumber);
   } catch (err) {
     nextNumber = null;
     if (err instanceof api.AuthError) return handleError(err);
@@ -93,7 +117,7 @@ async function refreshNextNumber() {
 function draftCards() {
   const issueDate = todayISO();
   const lifetime = $("lifetime").checked;
-  const expiryDate = lifetime ? null : $("expiry").value || addYears(issueDate, 1);
+  const expiryDate = lifetime ? null : $("expiry").value || defaultExpiry(issueDate);
   return parseNames($("names").value).map((name, i) => ({
     name,
     number: nextNumber == null ? null : nextNumber + i,
@@ -105,20 +129,22 @@ function draftCards() {
 
 function refreshIssue() {
   const cards = issued ?? draftCards();
-  $("issue-preview").innerHTML = cards.length ? renderSheets(cards) : '<p class="hint">輸入姓名後會在此顯示會員證。</p>';
+  $("issue-preview").innerHTML = cards.length ? renderSheets(cards) : `<p class="hint">${escapeHtml(t("issue.emptyPreview"))}</p>`;
 
   const lifetime = issued ? issued[0].lifetime : $("lifetime").checked;
   if (lifetime) {
-    $("expiry-hint").textContent = "永久會員：卡背顯示「永久會員」，不設有效日期。";
+    $("expiry-hint").textContent = t("issue.lifetimeHint");
   } else {
-    const first = issued ? issued[0].expiryDate : $("expiry").value || addYears(todayISO(), 1);
-    const prefix = issued || $("expiry").value ? "有效日期：" : "留空即為一年後：";
-    $("expiry-hint").textContent = `${prefix}${formatDMY(first)}`;
+    const first = issued ? issued[0].expiryDate : $("expiry").value || defaultExpiry(todayISO());
+    const date = fmtDate(first);
+    $("expiry-hint").textContent =
+      issued || $("expiry").value ? t("issue.expiryHint", { date }) : t("issue.expiryDefault", { count: config.validityYears, date });
   }
-  const sheets = `共 ${cards.length} 位，需 ${Math.ceil(cards.length / 5)} 張 A4 紙。`;
+  const sheets =
+    t("issue.members", { count: cards.length }) + t("issue.sheets", { count: Math.ceil(cards.length / STRIPS_PER_SHEET) });
   const expected =
     !issued && cards.length && nextNumber != null
-      ? `預計編號 ${formatNumber(nextNumber)}${cards.length > 1 ? "–" + formatNumber(nextNumber + cards.length - 1) : ""}（如同時有其他人新增，以確認後為準）。`
+      ? t("issue.expected", { range: numberRange(nextNumber, nextNumber + cards.length - 1) })
       : "";
   $("count-hint").textContent = cards.length ? sheets + expected : "";
 
@@ -143,8 +169,7 @@ $("issue-btn").addEventListener("click", async () => {
   try {
     const { issueDate, expiryDate, lifetime } = cards[0];
     issued = await api.issue(cards.map((c) => c.name), issueDate, expiryDate, lifetime);
-    const nums = issued.map((m) => formatNumber(m.number));
-    $("issued-msg").textContent = `已編號 ${nums[0]}${nums.length > 1 ? "–" + nums.at(-1) : ""}，已存入會員名單。`;
+    $("issued-msg").textContent = t("issue.done", { range: numberRange(issued[0].number, issued.at(-1).number) });
   } catch (err) {
     handleError(err);
   } finally {
@@ -170,7 +195,7 @@ $("new-batch-btn").addEventListener("click", () => {
   $("names").focus();
 });
 
-// ---------- 會員名單 ----------
+// ---------- member list ----------
 
 let members = [];
 const selected = new Set();
@@ -194,13 +219,13 @@ function renderMembers() {
     .map(
       (m) => `<tr>
         <td><input type="checkbox" data-select="${m.number}" ${selected.has(m.number) ? "checked" : ""}></td>
-        <td>${formatNumber(m.number)}</td>
+        <td>${fmtNumber(m.number)}</td>
         <td>${escapeHtml(m.name)}</td>
-        <td>${formatDMY(m.issueDate)}</td>
-        <td>${m.lifetime ? "永久會員" : formatDMY(m.expiryDate)}</td>
+        <td>${fmtDate(m.issueDate)}</td>
+        <td>${m.lifetime ? escapeHtml(t("member.lifetime")) : fmtDate(m.expiryDate)}</td>
         <td class="row-actions">
-          <button type="button" data-edit="${m.number}">編輯</button>
-          <button type="button" class="danger" data-delete="${m.number}">刪除</button>
+          <button type="button" data-edit="${m.number}">${escapeHtml(t("register.edit"))}</button>
+          <button type="button" class="danger" data-delete="${m.number}">${escapeHtml(t("register.delete"))}</button>
         </td>
       </tr>`,
     )
@@ -209,7 +234,7 @@ function renderMembers() {
   const visibleSelected = members.filter((m) => selected.has(m.number)).length;
   $("select-all").checked = members.length > 0 && visibleSelected === members.length;
   $("reprint-btn").disabled = selected.size === 0;
-  $("reprint-btn").textContent = selected.size ? `重印所選（${selected.size}）` : "重印所選";
+  $("reprint-btn").textContent = selected.size ? t("register.reprintCount", { count: selected.size }) : t("register.reprint");
 }
 
 $("search").addEventListener("input", () => {
@@ -243,28 +268,28 @@ $("members").addEventListener("click", async (e) => {
   const m = members.find((x) => x.number === (editNo || deleteNo));
   if (!m) return;
   if (editNo) return openEdit(m);
-  if (!confirm(`確定永久刪除 ${formatNumber(m.number)} ${m.name}？刪除後無法復原。`)) return;
+  if (!confirm(t("register.confirmDelete", { number: fmtNumber(m.number), name: m.name }))) return;
   try {
     await api.remove(m.number);
     selected.delete(m.number);
     memberCache.delete(m.number);
-    showStatus(`已刪除 ${formatNumber(m.number)} ${m.name}。`);
+    showStatus(t("register.deleted", { number: fmtNumber(m.number), name: m.name }));
     await loadMembers();
   } catch (err) {
     handleError(err);
   }
 });
 
-// ---------- 編輯會員 ----------
+// ---------- edit a member ----------
 
 let editing = null; // the member being edited, as loaded
 
 function openEdit(m) {
   editing = m;
-  $("edit-number").value = formatNumber(m.number);
+  $("edit-number").value = fmtNumber(m.number);
   $("edit-name").value = m.name;
   $("edit-lifetime").checked = m.lifetime;
-  $("edit-expiry").value = m.expiryDate ?? addYears(m.issueDate, 1);
+  $("edit-expiry").value = m.expiryDate ?? defaultExpiry(m.issueDate);
   showFormError("edit-error", "");
   refreshEditHint();
   $("edit-dialog").showModal();
@@ -276,9 +301,9 @@ function refreshEditHint() {
   $("edit-expiry").disabled = lifetime;
   $("edit-expiry").required = !lifetime;
   $("edit-hint").textContent = lifetime
-    ? "卡背顯示「永久會員」，不設有效日期。"
+    ? t("edit.lifetimeHint")
     : first
-      ? `卡背有效日期：${formatDMY(first)}`
+      ? t("edit.expiryHint", { date: fmtDate(first) })
       : "";
 }
 
@@ -291,12 +316,12 @@ $("edit-form").addEventListener("submit", async (e) => {
   const m = editing;
   const input = $("edit-number").value.trim();
   const number = /^\d+$/.test(input) ? Number(input) : NaN;
-  if (!Number.isInteger(number) || number < 1 || number > 99999) return showFormError("edit-error", "會員編號必須是 1 至 99999 的數字。");
+  if (!Number.isInteger(number) || number < 1 || number > 99999) return showFormError("edit-error", t("error.numberRange"));
   const name = $("edit-name").value.trim();
-  if (!name) return showFormError("edit-error", "請輸入姓名。");
+  if (!name) return showFormError("edit-error", t("error.nameRequired"));
   const lifetime = $("edit-lifetime").checked;
   const expiryDate = $("edit-expiry").value;
-  if (!lifetime && !expiryDate) return showFormError("edit-error", "請選擇有效日期，或勾選永久會員。");
+  if (!lifetime && !expiryDate) return showFormError("edit-error", t("error.expiryRequired"));
 
   const patch = {};
   if (number !== m.number) patch.number = number;
@@ -316,12 +341,12 @@ $("edit-form").addEventListener("submit", async (e) => {
     memberCache.delete(m.number);
     if (selected.has(updated.number)) memberCache.set(updated.number, updated);
     $("edit-dialog").close();
-    showStatus(`已更新 ${formatNumber(updated.number)} ${updated.name}。`);
+    showStatus(t("edit.updated", { number: fmtNumber(updated.number), name: updated.name }));
     await loadMembers();
   } catch (err) {
     if (err.status === 409) {
-      const who = err.data?.name ? `「${err.data.name}」` : "其他會員";
-      showFormError("edit-error", `會員編號 ${formatNumber(number)} 已被${who}使用，請選擇其他編號。`);
+      const vars = { number: fmtNumber(number), name: err.data?.name };
+      showFormError("edit-error", t(err.data?.name ? "error.numberTaken" : "error.numberTakenUnknown", vars));
     } else if (err instanceof api.AuthError) {
       $("edit-dialog").close();
       handleError(err);
@@ -339,7 +364,7 @@ $("reprint-btn").addEventListener("click", () => {
   printCards(cards);
 });
 
-// ---------- 設定 ----------
+// ---------- settings ----------
 
 function showFormError(id, message) {
   $(id).textContent = message;
@@ -351,7 +376,7 @@ async function openSettings() {
   showFormError("pc-error", "");
   $("next-input").value = "";
   try {
-    $("next-input").value = formatNumber(await api.nextNumber());
+    $("next-input").value = fmtNumber(await api.nextNumber());
   } catch (err) {
     handleError(err);
   }
@@ -361,16 +386,16 @@ $("next-form").addEventListener("submit", async (e) => {
   e.preventDefault();
   const input = $("next-input").value.trim();
   const next = /^\d+$/.test(input) ? Number(input) : NaN;
-  if (!Number.isInteger(next) || next < 1 || next > 99999) return showFormError("next-error", "會員編號必須是 1 至 99999 的數字。");
+  if (!Number.isInteger(next) || next < 1 || next > 99999) return showFormError("next-error", t("error.numberRange"));
   const btn = e.submitter;
   btn.disabled = true;
   showFormError("next-error", "");
   try {
     await api.setNextNumber(next);
-    $("next-input").value = formatNumber(next);
-    showStatus(`下一個會員編號已設為 ${formatNumber(next)}。`);
+    $("next-input").value = fmtNumber(next);
+    showStatus(t("settings.nextSaved", { number: fmtNumber(next) }));
   } catch (err) {
-    if (err.status === 409) showFormError("next-error", `必須大於現有最大的會員編號 ${formatNumber(err.data.highest)}。`);
+    if (err.status === 409) showFormError("next-error", t("error.nextTooLow", { number: fmtNumber(err.data.highest) }));
     else handleError(err);
   } finally {
     btn.disabled = false;
@@ -381,11 +406,11 @@ $("passcode-form").addEventListener("submit", async (e) => {
   e.preventDefault();
   const current = $("pc-current").value.trim();
   const next = $("pc-next").value.trim();
-  if (next !== $("pc-confirm").value.trim()) return showFormError("pc-error", "兩次輸入的新密碼不一致。");
+  if (next !== $("pc-confirm").value.trim()) return showFormError("pc-error", t("error.passcodeMismatch"));
   if (next.length < 6 || next.length > 64 || !/^[\x20-\x7e]+$/.test(next)) {
-    return showFormError("pc-error", "新密碼最少 6 個字元，只可使用英文字母、數字及符號。");
+    return showFormError("pc-error", t("error.passcodeRule"));
   }
-  if (next === current) return showFormError("pc-error", "新密碼與現時密碼相同。");
+  if (next === current) return showFormError("pc-error", t("error.passcodeSame"));
   const btn = e.submitter;
   btn.disabled = true;
   showFormError("pc-error", "");
@@ -393,10 +418,10 @@ $("passcode-form").addEventListener("submit", async (e) => {
     await api.changePasscode(current, next);
     api.passcode.set(next);
     e.target.reset();
-    showStatus("密碼已更改。其他電腦須輸入新密碼。");
+    showStatus(t("settings.pcSaved"));
   } catch (err) {
-    if (err.status === 403) showFormError("pc-error", "現時密碼不正確。");
-    else if (err.status === 400) showFormError("pc-error", "新密碼最少 6 個字元，只可使用英文字母、數字及符號。");
+    if (err.status === 403) showFormError("pc-error", t("error.passcodeWrongCurrent"));
+    else if (err.status === 400) showFormError("pc-error", t("error.passcodeRule"));
     else handleError(err);
   } finally {
     btn.disabled = false;

@@ -1,0 +1,15 @@
+{
+  "apiBase": "https://membership-api.richardfu71.workers.dev",
+  "locale": "zh-Hant",
+  "clubName": "澳門中國民族服飾愛好者協會",
+  "cardClubName": ["澳門中國民族服飾", "愛好者協會"],
+  "phone": "6638 2986",
+  "logo": "assets/logo.png",
+  "stamp": "assets/stamp.png",
+  "favicon": "assets/favicon.png",
+  "cardColor": "#a3302f",
+  "appColor": "#543c7d",
+  "numberDigits": 3,
+  "validityYears": 1,
+  "dateFormat": "DD/MM/YYYY"
+}
