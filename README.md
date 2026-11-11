@@ -1,5 +1,13 @@
 # Membership Manager
 
+[![Deploy](https://github.com/furic/membership-manager/actions/workflows/pages.yml/badge.svg)](https://github.com/furic/membership-manager/actions/workflows/pages.yml)
+[![Live site](https://img.shields.io/badge/live-furic.github.io-543c7d?logo=githubpages&logoColor=white)](https://furic.github.io/membership-manager/)
+[![License: MIT](https://img.shields.io/badge/license-MIT-a3302f)](LICENSE)
+![Cloudflare Workers + D1](https://img.shields.io/badge/API-Cloudflare%20Workers%20%2B%20D1-F38020?logo=cloudflare&logoColor=white)
+![No build step](https://img.shields.io/badge/build-none%2C%20vanilla%20JS-F7DF1E?logo=javascript&logoColor=black)
+![Languages](https://img.shields.io/badge/i18n-English%20%7C%20%E7%B9%81%E9%AB%94%E4%B8%AD%E6%96%87-2d5a3d)
+![Prints on A4](https://img.shields.io/badge/prints-A4%2C%205%20cards%20per%20sheet-555)
+
 English · [繁體中文](README.zh-Hant.md)
 
 A small web app for clubs: keep a shared member register, give out member numbers that never collide, and print fold-over membership cards on plain A4 (5 cards per sheet, front and back side by side, cut and fold).
